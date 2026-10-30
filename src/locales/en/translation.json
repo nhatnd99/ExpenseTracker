@@ -1,0 +1,118 @@
+{
+  "app": {
+    "title": "Expense Tracker",
+    "dashboard": "Dashboard",
+    "plan": "Monthly Plan",
+    "transactions": "Expenses",
+    "reports": "Reports",
+    "settings": "Settings"
+  },
+  "nav": {
+    "dashboard": "Dashboard",
+    "plan": "Plan",
+    "expenses": "Expenses",
+    "reports": "Reports"
+  },
+  "common": {
+    "loading": "Loading…",
+    "save": "Save",
+    "saving": "Saving…",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "back": "Back",
+    "total": "Total",
+    "day": "day",
+    "days": "days",
+    "month": "Month",
+    "currentMonth": "Current Month",
+    "success": "Success",
+    "error": "Error"
+  },
+  "dashboard": {
+    "welcomeTitle": "Personal Expense Tracker",
+    "welcomeDesc": "Take control of your finances. Set up your monthly income and custom budget allocations to begin.",
+    "setupPlanBtn": "Set Up Budget Plan",
+    "noActivePlan": "No active budget for this month",
+    "noActivePlanDesc": "Your daily budget calculations and spending progress will appear here once configured.",
+    "monthlyBudget": "Monthly Budget",
+    "editPlan": "Edit Plan",
+    "totalExpenseBudget": "Total Expense Budget",
+    "remaining": "Remaining",
+    "spent": "Spent",
+    "todayDailyBudget": "Today's Daily Budget",
+    "todaySpent": "Today's Spent",
+    "todayRemaining": "Today's Remaining",
+    "onTrack": "On Track",
+    "overBudget": "Over Budget",
+    "quickActions": "Quick Actions",
+    "addExpense": "Add Expense",
+    "manageBudget": "Manage Budget",
+    "recentExpenses": "Recent Expenses",
+    "viewAll": "View All",
+    "noExpensesYet": "No expenses recorded yet for this month."
+  },
+  "plan": {
+    "title": "Monthly Budget Plan",
+    "subtitle": "Configure your monthly income and custom category allocation percentages.",
+    "planningMonth": "Planning Month",
+    "incomeLabel": "Monthly Income",
+    "incomePlaceholder": "Enter income amount",
+    "incomeSubtext": "Your total net take-home income for the month",
+    "calculatedDaily": "Calculated Daily Spending Budget",
+    "dailySubtext": "Based on {{percent}}% allocated to Daily Expenses ({{amount}})",
+    "allocationTitle": "Budget Allocation",
+    "allocationSubtext": "Percentages must total exactly 100%",
+    "allocatedAmount": "Allocated amount",
+    "saveSuccess": "Budget plan saved successfully!",
+    "saveBtn": "Save Monthly Budget Plan",
+    "savingBtn": "Saving Plan…",
+    "errorSum": "Total allocation must equal 100%. Currently: {{current}}%",
+    "cat_expenses": "Daily Expenses",
+    "cat_savings": "Savings",
+    "cat_investment": "Investment",
+    "cat_emergency": "Emergency Fund"
+  },
+  "transactions": {
+    "title": "Daily Expenses",
+    "totalSpent": "Total Spent",
+    "addExpenseBtn": "Add New Expense",
+    "recordExpenseTitle": "Record Expense",
+    "amountLabel": "Amount (VND)",
+    "categoryLabel": "Category",
+    "dateLabel": "Date",
+    "noteLabel": "Note / Description (Optional)",
+    "notePlaceholder": "e.g. Lunch with team, supermarket…",
+    "saveExpense": "Save Expense",
+    "saving": "Saving…",
+    "noTransactions": "No expenses recorded",
+    "noTransactionsDesc": "Tap \"Add New Expense\" to log your spending for {{month}}.",
+    "expensesListTitle": "Expenses ({{count}})",
+    "confirmDelete": "Are you sure you want to delete this expense?",
+    "amountRequired": "Please enter a valid amount greater than 0."
+  },
+  "reports": {
+    "title": "Financial Reports",
+    "reportMonth": "Report Month",
+    "totalSpent": "Total Spent",
+    "noRecords": "No expense records found",
+    "noRecordsDesc": "Transactions recorded in {{month}} will be categorized and analyzed here.",
+    "spendingByCategory": "Spending by Category"
+  },
+  "theme": {
+    "toggleTheme": "Toggle color theme",
+    "light": "Light",
+    "dark": "Dark"
+  },
+  "language": {
+    "select": "Language",
+    "en": "English",
+    "vi": "Tiếng Việt"
+  },
+  "pwa": {
+    "updateAvailable": "A new version of Expense Tracker is available.",
+    "updateNow": "Update now",
+    "later": "Later"
+  }
+}
+

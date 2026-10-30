@@ -1,0 +1,118 @@
+{
+  "app": {
+    "title": "Quản Lý Chi Tiêu",
+    "dashboard": "Tổng Quan",
+    "plan": "Kế Hoạch Tháng",
+    "transactions": "Chi Tiêu",
+    "reports": "Báo Cáo",
+    "settings": "Cài Đặt"
+  },
+  "nav": {
+    "dashboard": "Tổng quan",
+    "plan": "Kế hoạch",
+    "expenses": "Chi tiêu",
+    "reports": "Báo cáo"
+  },
+  "common": {
+    "loading": "Đang tải…",
+    "save": "Lưu",
+    "saving": "Đang lưu…",
+    "cancel": "Hủy",
+    "delete": "Xóa",
+    "edit": "Sửa",
+    "back": "Quay lại",
+    "total": "Tổng cộng",
+    "day": "ngày",
+    "days": "ngày",
+    "month": "Tháng",
+    "currentMonth": "Tháng hiện tại",
+    "success": "Thành công",
+    "error": "Lỗi"
+  },
+  "dashboard": {
+    "welcomeTitle": "Sổ Chi Tiêu Cá Nhân",
+    "welcomeDesc": "Kiểm soát tài chính thông minh. Hãy thiết lập thu nhập và phân bổ ngân sách tháng để bắt đầu theo dõi.",
+    "setupPlanBtn": "Thiết Lập Ngân Sách",
+    "noActivePlan": "Chưa có ngân sách cho tháng này",
+    "noActivePlanDesc": "Ngân sách chi tiêu mỗi ngày và tiến độ tài chính sẽ hiển thị tại đây sau khi thiết lập.",
+    "monthlyBudget": "Ngân Sách Tháng",
+    "editPlan": "Chỉnh sửa",
+    "totalExpenseBudget": "Hạn Mức Chi Tiêu",
+    "remaining": "Còn Lại",
+    "spent": "Đã Tiêu",
+    "todayDailyBudget": "Hạn Mức Hôm Nay",
+    "todaySpent": "Hôm Nay Đã Tiêu",
+    "todayRemaining": "Hôm Nay Còn Lại",
+    "onTrack": "Đúng Kế Hoạch",
+    "overBudget": "Vượt Hạn Mức",
+    "quickActions": "Thao Tác Nhanh",
+    "addExpense": "Thêm Chi Tiêu",
+    "manageBudget": "Sửa Ngân Sách",
+    "recentExpenses": "Chi Tiêu Gần Đây",
+    "viewAll": "Xem tất cả",
+    "noExpensesYet": "Chưa có khoản chi tiêu nào trong tháng này."
+  },
+  "plan": {
+    "title": "Kế Hoạch Ngân Sách Tháng",
+    "subtitle": "Nhập thu nhập hàng tháng và phân bổ tỷ lệ phần trăm theo danh mục chi tiêu.",
+    "planningMonth": "Tháng Lập Kế Hoạch",
+    "incomeLabel": "Thu Nhập Hàng Tháng",
+    "incomePlaceholder": "Nhập số tiền thu nhập",
+    "incomeSubtext": "Tổng thu nhập thực tế dự kiến nhận trong tháng",
+    "calculatedDaily": "Hạn Mức Chi Tiêu Mỗi Ngày",
+    "dailySubtext": "Dựa trên {{percent}}% cho Chi Tiêu Hàng Ngày ({{amount}})",
+    "allocationTitle": "Phân Bổ Ngân Sách",
+    "allocationSubtext": "Tổng các tỷ lệ phải đúng 100%",
+    "allocatedAmount": "Số tiền phân bổ",
+    "saveSuccess": "Đã lưu kế hoạch ngân sách thành công!",
+    "saveBtn": "Lưu Kế Hoạch Ngân Sách",
+    "savingBtn": "Đang Lưu…",
+    "errorSum": "Tổng tỷ lệ phân bổ phải bằng 100%. Hiện tại: {{current}}%",
+    "cat_expenses": "Chi Tiêu Hàng Ngày",
+    "cat_savings": "Tiết Kiệm",
+    "cat_investment": "Đầu Tư",
+    "cat_emergency": "Quỹ Khẩn Cấp"
+  },
+  "transactions": {
+    "title": "Ghi Chép Chi Tiêu",
+    "totalSpent": "Tổng Chi Tiêu",
+    "addExpenseBtn": "Ghi Khoản Chi Mới",
+    "recordExpenseTitle": "Thêm Khoản Chi Tiêu",
+    "amountLabel": "Số Tiền (VND)",
+    "categoryLabel": "Danh Mục",
+    "dateLabel": "Ngày Chi Tiêu",
+    "noteLabel": "Ghi Chú / Diễn Giải (Tùy chọn)",
+    "notePlaceholder": "Ví dụ: Cơm trưa đồng nghiệp, siêu thị…",
+    "saveExpense": "Lưu Khoản Chi",
+    "saving": "Đang lưu…",
+    "noTransactions": "Chưa có chi tiêu nào",
+    "noTransactionsDesc": "Nhấn \"Ghi Khoản Chi Mới\" để ghi nhận chi tiêu trong {{month}}.",
+    "expensesListTitle": "Danh Sách Khoản Chi ({{count}})",
+    "confirmDelete": "Bạn có chắc chắn muốn xóa khoản chi này?",
+    "amountRequired": "Vui lòng nhập số tiền chi tiêu lớn hơn 0."
+  },
+  "reports": {
+    "title": "Báo Cáo Tài Chính",
+    "reportMonth": "Tháng Báo Cáo",
+    "totalSpent": "Tổng Đã Tiêu",
+    "noRecords": "Không tìm thấy dữ liệu chi tiêu",
+    "noRecordsDesc": "Các khoản chi trong {{month}} sẽ được phân loại và hiển thị biểu đồ tại đây.",
+    "spendingByCategory": "Tỷ Trọng Theo Danh Mục"
+  },
+  "theme": {
+    "toggleTheme": "Đổi chế độ giao diện",
+    "light": "Sáng",
+    "dark": "Tối"
+  },
+  "language": {
+    "select": "Ngôn ngữ",
+    "en": "English",
+    "vi": "Tiếng Việt"
+  },
+  "pwa": {
+    "updateAvailable": "Đã có bản cập nhật mới của ứng dụng.",
+    "updateNow": "Cập nhật ngay",
+    "later": "Để sau"
+  }
+}
+

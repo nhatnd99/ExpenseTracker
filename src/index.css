@@ -1,0 +1,43 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@layer base {
+  :root {
+    --sat: env(safe-area-inset-top);
+    --sab: env(safe-area-inset-bottom);
+    --sal: env(safe-area-inset-left);
+    --sar: env(safe-area-inset-right);
+  }
+
+  * {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  html {
+    font-size: 16px;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    @apply bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100 antialiased transition-colors duration-200;
+    min-height: 100dvh;
+  }
+
+  /* Safe area support for iOS home indicator */
+  #root {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+}
+
+@layer components {
+  /* Monetary display typography */
+  .amount-display {
+    @apply font-mono font-semibold tabular-nums;
+  }
+
+  /* Touch-friendly minimum tap targets */
+  .touch-target {
+    @apply min-h-11 min-w-11 flex items-center justify-center;
+  }
+}
