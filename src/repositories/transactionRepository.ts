@@ -23,6 +23,12 @@ export const transactionRepository = {
       .toArray()
   },
 
+  /** Returns transactions for a specific date (across any plan) */
+  async findByDateOnly(date: DateString): Promise<Transaction[]> {
+    const txs = await db.transactions.where('date').equals(date).toArray()
+    return txs.sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+  },
+
   /** Returns all transactions for a category */
   async findByCategoryId(categoryId: string): Promise<Transaction[]> {
     return db.transactions.where('categoryId').equals(categoryId).toArray()
@@ -55,4 +61,3 @@ export const transactionRepository = {
     return txs.reduce((sum, tx) => sum + tx.amountVnd, 0)
   },
 }
-

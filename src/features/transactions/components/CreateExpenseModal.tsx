@@ -1,6 +1,8 @@
 import React, { useState } from 'react'
-import { X, Calendar as CalendarIcon } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
+import { X, Calendar as CalendarIcon, Trash2 } from 'lucide-react'
 import type { BudgetCategory } from '@/types/models'
+import type { EnrichedTransaction } from '../transactionService'
 import { getTodayString } from '@/services/dateService'
 import { useNumpadInput } from '../hooks/useNumpadInput'
 import { CustomNumpad } from './CustomNumpad'
@@ -8,17 +10,21 @@ import { CategorySelector } from './CategorySelector'
 import { SmartNoteInput } from './SmartNoteInput'
 import { CategoryManagerModal } from './CategoryManagerModal'
 
-interface CreateExpenseModalProps {
+export interface CreateExpenseModalProps {
   isOpen: boolean
   onClose: () => void
   categories: BudgetCategory[]
   onCategoriesChanged: () => void
+  initialDate?: string
+  initialTransaction?: EnrichedTransaction | null
   onSubmit: (data: {
+    id?: string
     amountVnd: number
     categoryId: string
     date: string
     description?: string
   }) => Promise<void>
+  onDelete?: (id: string) => Promise<void>
 }
 
 export const CreateExpenseModal: React.FC<CreateExpenseModalProps> = ({
@@ -26,31 +32,39 @@ export const CreateExpenseModal: React.FC<CreateExpenseModalProps> = ({
   onClose,
   categories,
   onCategoriesChanged,
+  initialDate,
+  initialTransaction,
   onSubmit,
+  onDelete,
 }) => {
+  const { t } = useTranslation()
+
   const {
     formattedAmount,
     numericAmount,
     handleKeyPress,
     handleDelete,
     handleClear,
-    setRawAmount,
-  } = useNumpadInput('')
+  } = useNumpadInput(initialTransaction ? String(initialTransaction.amountVnd) : '')
 
-  const [selectedCategoryId, setSelectedCategoryId] = useState<string>('')
-  const [date, setDate] = useState<string>(getTodayString())
-  const [note, setNote] = useState<string>('')
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string>(
+    initialTransaction?.categoryId || (categories[0]?.id ?? '')
+  )
+  const [date, setDate] = useState<string>(
+    initialTransaction?.date || initialDate || getTodayString()
+  )
+  const [note, setNote] = useState<string>(initialTransaction?.description || '')
   const [submitting, setSubmitting] = useState(false)
   const [isCategoryManagerOpen, setIsCategoryManagerOpen] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
 
-  // Determine current active category ID safely without redundant setState effect
+  if (!isOpen) return null
+
+  // Ensure active category ID is valid
   const activeCategoryId =
     selectedCategoryId && categories.some((c) => c.id === selectedCategoryId)
       ? selectedCategoryId
       : categories[0]?.id ?? ''
-
-  if (!isOpen) return null
 
   const handleQuickDate = (daysAgo: number) => {
     const d = new Date()
@@ -65,12 +79,12 @@ export const CreateExpenseModal: React.FC<CreateExpenseModalProps> = ({
 
   const handleSubmit = async () => {
     if (numericAmount <= 0) {
-      setErrorMessage('Vui lòng nhập số tiền chi tiêu lớn hơn 0.')
+      setErrorMessage(t('transactions.amountRequired', 'Vui lòng nhập số tiền chi tiêu lớn hơn 0.'))
       return
     }
 
     if (!activeCategoryId) {
-      setErrorMessage('Vui lòng chọn một danh mục.')
+      setErrorMessage(t('transactions.categoryRequired', 'Vui lòng chọn một danh mục.'))
       return
     }
 
@@ -79,40 +93,72 @@ export const CreateExpenseModal: React.FC<CreateExpenseModalProps> = ({
 
     try {
       await onSubmit({
+        id: initialTransaction?.id,
         amountVnd: numericAmount,
         categoryId: activeCategoryId,
         date,
         description: note.trim() || undefined,
       })
 
-      // Reset & Close
-      setRawAmount('')
-      setNote('')
-      setDate(getTodayString())
       onClose()
     } catch (err) {
-      setErrorMessage(err instanceof Error ? err.message : 'Lỗi khi lưu khoản chi.')
+      setErrorMessage(err instanceof Error ? err.message : t('common.error', 'Lỗi khi lưu khoản chi.'))
     } finally {
       setSubmitting(false)
     }
   }
 
+  const handleDeleteRecord = async () => {
+    if (!initialTransaction || !onDelete) return
+    if (!confirm(t('transactions.confirmDelete', 'Bạn có chắc chắn muốn xóa khoản chi này?'))) return
+
+    setSubmitting(true)
+    try {
+      await onDelete(initialTransaction.id)
+      onClose()
+    } catch (err) {
+      setErrorMessage(err instanceof Error ? err.message : t('common.error', 'Lỗi khi xóa.'))
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  const isEditMode = Boolean(initialTransaction)
+
   return (
     <>
       <div className="fixed inset-0 z-40 flex flex-col justify-end bg-black/60 backdrop-blur-xs">
-        <div className="w-full max-w-lg mx-auto rounded-t-3xl border-t border-[var(--color-border)] bg-[var(--color-bg-surface)] shadow-2xl flex flex-col max-h-[92vh]">
+        <div className="w-full max-w-lg mx-auto rounded-t-3xl border-t border-[var(--color-border)] bg-[var(--color-bg-surface)] shadow-2xl flex flex-col max-h-[94vh]">
           {/* Header */}
           <div className="flex items-center justify-between px-5 pt-4 pb-2 border-b border-[var(--color-border)]">
             <h2 className="text-sm font-bold text-[var(--color-text-primary)]">
-              Ghi Khoản Chi Tiêu Mới
+              {isEditMode
+                ? t('transactions.editExpenseTitle', 'Chỉnh Sửa Khoản Chi')
+                : t('transactions.recordExpenseTitle', 'Thêm Khoản Chi Tiêu')}
             </h2>
-            <button
-              type="button"
-              onClick={onClose}
-              className="flex h-8 w-8 items-center justify-center rounded-xl text-[var(--color-text-muted)] hover:bg-[var(--color-bg-subtle)] hover:text-[var(--color-text-primary)] cursor-pointer"
-            >
-              <X className="h-5 w-5" />
-            </button>
+
+            <div className="flex items-center gap-1">
+              {isEditMode && onDelete && (
+                <button
+                  type="button"
+                  onClick={() => void handleDeleteRecord()}
+                  disabled={submitting}
+                  className="flex h-8 w-8 items-center justify-center rounded-xl text-[var(--color-expense)] hover:bg-[var(--color-expense-soft)] transition-colors cursor-pointer disabled:opacity-40"
+                  aria-label={t('common.delete', 'Xóa')}
+                  title={t('transactions.deleteExpense', 'Xóa khoản chi')}
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={onClose}
+                className="flex h-8 w-8 items-center justify-center rounded-xl text-[var(--color-text-muted)] hover:bg-[var(--color-bg-subtle)] hover:text-[var(--color-text-primary)] cursor-pointer"
+                aria-label={t('common.cancel', 'Đóng')}
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
           </div>
 
           {/* Body Scrollable Area */}
@@ -120,7 +166,7 @@ export const CreateExpenseModal: React.FC<CreateExpenseModalProps> = ({
             {/* Amount Hero Display */}
             <div className="text-center py-2">
               <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--color-text-muted)]">
-                Số tiền chi
+                {t('transactions.amountSpent', 'Số tiền chi')}
               </span>
               <div className="mt-1 flex items-baseline justify-center gap-1">
                 <span className="text-xl font-bold text-[var(--color-expense)]">-</span>
@@ -135,7 +181,9 @@ export const CreateExpenseModal: React.FC<CreateExpenseModalProps> = ({
             <div className="flex items-center justify-between rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg-subtle)] p-2 text-xs">
               <div className="flex items-center gap-1.5 px-2">
                 <CalendarIcon className="h-4 w-4 text-[var(--color-text-muted)]" />
-                <span className="font-semibold text-[var(--color-text-secondary)]">Ngày:</span>
+                <span className="font-semibold text-[var(--color-text-secondary)]">
+                  {t('transactions.dateLabel', 'Ngày')}:
+                </span>
               </div>
 
               <div className="flex items-center gap-1">
@@ -148,7 +196,7 @@ export const CreateExpenseModal: React.FC<CreateExpenseModalProps> = ({
                       : 'text-[var(--color-text-secondary)] hover:bg-[var(--color-border)]'
                   }`}
                 >
-                  Hôm nay
+                  {t('transactions.today', 'Hôm nay')}
                 </button>
                 <button
                   type="button"
@@ -159,13 +207,13 @@ export const CreateExpenseModal: React.FC<CreateExpenseModalProps> = ({
                       : 'text-[var(--color-text-secondary)] hover:bg-[var(--color-border)]'
                   }`}
                 >
-                  Hôm qua
+                  {t('transactions.yesterday', 'Hôm qua')}
                 </button>
                 <input
                   type="date"
                   value={date}
                   onChange={(e) => setDate(e.target.value)}
-                  className="rounded-xl border border-[var(--color-border)] bg-[var(--color-bg-surface)] px-2 py-1 text-xs font-semibold text-[var(--color-text-primary)] focus:outline-none"
+                  className="rounded-xl border border-[var(--color-border)] bg-[var(--color-bg-surface)] px-2 py-1 text-base sm:text-xs font-semibold text-[var(--color-text-primary)] focus:outline-none"
                 />
               </div>
             </div>
@@ -192,14 +240,20 @@ export const CreateExpenseModal: React.FC<CreateExpenseModalProps> = ({
             )}
           </div>
 
-          {/* Custom Numpad Fixed At Bottom */}
+          {/* Custom Numpad Fixed At Bottom with Safe-Area Padding */}
           <CustomNumpad
             onKeyPress={handleKeyPress}
             onDelete={handleDelete}
             onClear={handleClear}
-            onSubmit={handleSubmit}
+            onSubmit={() => void handleSubmit()}
             isSubmitDisabled={submitting || numericAmount <= 0}
-            submitLabel={submitting ? 'Đang lưu…' : 'Lưu Chi Tiêu'}
+            submitLabel={
+              submitting
+                ? t('transactions.saving', 'Đang lưu…')
+                : isEditMode
+                  ? t('transactions.updateExpense', 'Cập Nhật')
+                  : t('transactions.saveExpense', 'Lưu Chi Tiêu')
+            }
           />
         </div>
       </div>

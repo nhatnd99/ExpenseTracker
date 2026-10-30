@@ -29,6 +29,24 @@ export async function getCategories(): Promise<BudgetCategory[]> {
 }
 
 /**
+ * Returns all transactions for a specific date (across any month) with category metadata.
+ */
+export async function getTransactionsForDate(date: DateString): Promise<EnrichedTransaction[]> {
+  const transactions = await transactionRepository.findByDateOnly(date)
+  const categories = await categoryRepository.findAll()
+  const categoryMap = new Map(categories.map((c) => [c.id, c]))
+
+  return transactions.map((tx) => {
+    const cat = categoryMap.get(tx.categoryId)
+    return {
+      ...tx,
+      categoryName: cat?.name ?? 'Other',
+      categoryIcon: cat?.icon ?? '💸',
+    }
+  })
+}
+
+/**
  * Returns all transactions for a given month with category metadata.
  */
 export async function getTransactionsForMonth(month: MonthId): Promise<EnrichedTransaction[]> {
@@ -92,7 +110,28 @@ export async function updateTransaction(
   id: string,
   changes: Partial<Pick<Transaction, 'amountVnd' | 'date' | 'categoryId' | 'description' | 'status'>>,
 ): Promise<void> {
-  await transactionRepository.update(id, changes)
+  let monthlyPlanId: string | undefined
+  if (changes.date) {
+    const month = dateToMonthId(changes.date)
+    let plan = await monthlyPlanRepository.findByMonth(month)
+    if (!plan) {
+      const now = new Date().toISOString()
+      plan = {
+        id: crypto.randomUUID(),
+        month,
+        incomeVnd: 0,
+        createdAt: now,
+        updatedAt: now,
+      }
+      await monthlyPlanRepository.create(plan)
+    }
+    monthlyPlanId = plan.id
+  }
+
+  await transactionRepository.update(id, {
+    ...changes,
+    ...(monthlyPlanId ? { monthlyPlanId } : {}),
+  })
 }
 
 /** Deletes a transaction permanently */

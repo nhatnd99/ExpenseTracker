@@ -1,4 +1,5 @@
 import React from 'react'
+import { useTranslation } from 'react-i18next'
 import { Plus } from 'lucide-react'
 import type { BudgetCategory } from '@/types/models'
 
@@ -15,11 +16,13 @@ export const CategorySelector: React.FC<CategorySelectorProps> = ({
   onSelectCategory,
   onOpenManager,
 }) => {
+  const { t } = useTranslation()
+
   return (
     <div className="space-y-1.5">
       <div className="flex items-center justify-between px-1">
         <span className="text-xs font-bold text-[var(--color-text-secondary)] uppercase tracking-wider">
-          Danh mục
+          {t('transactions.categories', 'Danh mục')}
         </span>
         <button
           type="button"
@@ -27,7 +30,7 @@ export const CategorySelector: React.FC<CategorySelectorProps> = ({
           className="flex items-center gap-1 text-xs font-semibold text-[var(--color-primary)] hover:underline cursor-pointer"
         >
           <Plus className="h-3.5 w-3.5" />
-          <span>Tùy chỉnh</span>
+          <span>{t('transactions.customize', 'Tùy chỉnh')}</span>
         </button>
       </div>
 

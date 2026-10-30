@@ -49,7 +49,7 @@ export const CustomNumpad: React.FC<CustomNumpadProps> = ({
   const fnKeyClass = `${keyBaseClass} bg-[var(--color-bg-subtle)] text-[var(--color-text-secondary)] border border-[var(--color-border)] shadow-2xs hover:bg-[var(--color-border)]`
 
   return (
-    <div className="grid grid-cols-4 gap-2 p-3 bg-[var(--color-bg-surface)] border-t border-[var(--color-border)] rounded-t-3xl shadow-lg">
+    <div className="grid grid-cols-4 gap-2 px-3 pt-3 pb-[calc(env(safe-area-inset-bottom,0px)+1rem)] bg-[var(--color-bg-surface)] border-t border-[var(--color-border)] rounded-t-3xl shadow-lg">
       {/* Row 1 */}
       <button type="button" onClick={() => handlePress('1')} className={numKeyClass}>1</button>
       <button type="button" onClick={() => handlePress('2')} className={numKeyClass}>2</button>

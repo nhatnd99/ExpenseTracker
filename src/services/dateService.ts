@@ -36,6 +36,13 @@ export function parseDateString(dateStr: DateString): Date {
   return new Date(year, month - 1, day)
 }
 
+/** Shifts a "YYYY-MM-DD" date string by a given number of days (+1 or -1) */
+export function shiftDate(dateStr: DateString, offsetDays: number): DateString {
+  const d = parseDateString(dateStr)
+  d.setDate(d.getDate() + offsetDays)
+  return formatDate(d)
+}
+
 /** Returns the month portion of a "YYYY-MM-DD" date string */
 export function dateToMonthId(dateStr: DateString): MonthId {
   return dateStr.slice(0, 7)
