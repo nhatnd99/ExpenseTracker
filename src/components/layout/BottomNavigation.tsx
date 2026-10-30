@@ -14,7 +14,7 @@ export function BottomNavigation() {
 
   return (
     <nav
-      className="sticky bottom-0 z-20 border-t border-slate-100 bg-white/95 backdrop-blur-md transition-colors dark:border-slate-800 dark:bg-slate-950/90"
+      className="sticky bottom-0 z-20 border-t border-[var(--color-border)] bg-[var(--color-bg-surface)]/95 backdrop-blur-md transition-colors duration-200"
       aria-label="Main navigation"
     >
       <div className="mx-auto max-w-lg">
@@ -27,8 +27,8 @@ export function BottomNavigation() {
                 className={({ isActive }) =>
                   `flex flex-col items-center justify-center py-2.5 text-center transition-all touch-target w-full ${
                     isActive
-                      ? 'text-cyan-600 font-bold dark:text-cyan-400'
-                      : 'text-slate-400 hover:text-slate-600 dark:text-slate-400 dark:hover:text-slate-200'
+                      ? 'text-[var(--color-primary)] font-bold'
+                      : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary)]'
                   }`
                 }
               >
@@ -37,7 +37,7 @@ export function BottomNavigation() {
                     <div
                       className={`flex h-7 w-7 items-center justify-center rounded-xl transition-all ${
                         isActive
-                          ? 'bg-cyan-50 dark:bg-cyan-950/60 scale-105'
+                          ? 'bg-[var(--color-primary-soft)] scale-105'
                           : 'bg-transparent'
                       }`}
                     >

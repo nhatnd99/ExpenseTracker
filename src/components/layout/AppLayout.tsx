@@ -8,7 +8,7 @@ export function AppLayout() {
   const isLoading = navigation.state === 'loading'
 
   return (
-    <div className="flex min-h-dvh flex-col bg-slate-50 text-slate-900 transition-colors dark:bg-slate-950 dark:text-slate-100">
+    <div className="flex min-h-dvh flex-col bg-[var(--color-bg-app)] text-[var(--color-text-primary)] transition-colors duration-200">
       <div className="flex flex-col flex-1 pb-[env(safe-area-inset-bottom)]">
         <AppHeader />
         <main className="flex-1 overflow-y-auto">

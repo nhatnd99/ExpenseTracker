@@ -12,12 +12,12 @@ export function ThemeToggle() {
       onClick={toggleTheme}
       aria-label={t('theme.toggleTheme')}
       title={theme === 'dark' ? t('theme.light') : t('theme.dark')}
-      className="relative flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-700 shadow-xs transition-colors hover:bg-slate-100 hover:text-slate-900 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800 dark:hover:text-white cursor-pointer"
+      className="relative flex h-9 w-9 items-center justify-center rounded-xl border border-[var(--color-border)] bg-[var(--color-bg-surface)] text-[var(--color-text-secondary)] shadow-2xs transition-colors hover:bg-[var(--color-bg-subtle)] hover:text-[var(--color-text-primary)] cursor-pointer"
     >
       {theme === 'dark' ? (
-        <Sun className="h-4 w-4 text-amber-400 transition-transform hover:rotate-45" />
+        <Sun className="h-4 w-4 text-[var(--color-warning)] transition-transform hover:rotate-45" />
       ) : (
-        <Moon className="h-4 w-4 text-slate-700 transition-transform" />
+        <Moon className="h-4 w-4 text-[var(--color-text-secondary)] transition-transform" />
       )}
     </button>
   )

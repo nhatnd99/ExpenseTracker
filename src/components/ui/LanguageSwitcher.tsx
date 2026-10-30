@@ -17,11 +17,10 @@ export function LanguageSwitcher() {
       onClick={toggleLanguage}
       aria-label={t('language.select')}
       title={currentLang === 'en' ? 'Chuyển sang Tiếng Việt' : 'Switch to English'}
-      className="flex h-9 items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-2.5 text-xs font-bold text-slate-700 shadow-xs transition-colors hover:bg-slate-100 hover:text-slate-900 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800 dark:hover:text-white cursor-pointer"
+      className="flex h-9 items-center gap-1.5 rounded-xl border border-[var(--color-border)] bg-[var(--color-bg-surface)] px-2.5 text-xs font-bold text-[var(--color-text-secondary)] shadow-2xs transition-colors hover:bg-[var(--color-bg-subtle)] hover:text-[var(--color-text-primary)] cursor-pointer"
     >
-      <Languages className="h-3.5 w-3.5 text-cyan-600 dark:text-cyan-400" />
+      <Languages className="h-3.5 w-3.5 text-[var(--color-primary)]" />
       <span className="uppercase tracking-wider">{currentLang}</span>
     </button>
   )
 }
-

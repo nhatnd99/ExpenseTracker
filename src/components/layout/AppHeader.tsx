@@ -25,15 +25,15 @@ export function AppHeader() {
 
   return (
     <header
-      className="sticky top-0 z-20 border-b border-slate-100 bg-white/90 backdrop-blur-md transition-colors dark:border-slate-800 dark:bg-slate-950/80"
+      className="sticky top-0 z-20 border-b border-[var(--color-border)] bg-[var(--color-bg-surface)]/90 backdrop-blur-md transition-colors duration-200"
       style={{ paddingTop: 'env(safe-area-inset-top)' }}
     >
       <div className="mx-auto flex h-14 max-w-lg items-center justify-between px-4">
         <div className="flex items-center gap-2.5">
-          <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-slate-900 text-cyan-400 shadow-xs dark:bg-slate-800">
+          <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-[var(--color-primary-soft)] text-[var(--color-primary)] shadow-2xs">
             <Wallet className="h-4 w-4" />
           </div>
-          <h1 className="text-base font-bold text-slate-900 dark:text-white">
+          <h1 className="text-base font-bold text-[var(--color-text-primary)]">
             {getTitle()}
           </h1>
         </div>

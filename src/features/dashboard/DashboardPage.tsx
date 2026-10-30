@@ -56,8 +56,8 @@ export function DashboardPage() {
     return (
       <PageContainer title={t('app.dashboard')}>
         <div className="space-y-4">
-          <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-slate-900 via-slate-800 to-cyan-950 p-6 text-white shadow-xl dark:border dark:border-slate-800">
-            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/10 backdrop-blur-md text-cyan-300 mb-4">
+          <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-slate-900 via-blue-950 to-slate-900 p-6 text-white shadow-xl border border-[var(--color-border)]">
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/10 backdrop-blur-md text-[var(--color-primary)] mb-4">
               <Sparkles className="h-6 w-6" />
             </div>
             <h2 className="text-xl font-bold tracking-tight">{t('dashboard.welcomeTitle')}</h2>
@@ -66,21 +66,21 @@ export function DashboardPage() {
             </p>
             <Link
               to="/plan"
-              className="mt-5 inline-flex items-center gap-2 rounded-2xl bg-cyan-400 px-5 py-3.5 text-sm font-bold text-slate-950 shadow-md transition-transform hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
+              className="mt-5 inline-flex items-center gap-2 rounded-2xl bg-[var(--color-primary)] px-5 py-3.5 text-sm font-bold text-white shadow-md transition-transform hover:bg-[var(--color-primary-hover)] active:scale-[0.98] cursor-pointer"
             >
               <span>{t('dashboard.setupPlanBtn')}</span>
               <ArrowRight className="h-4 w-4" />
             </Link>
           </div>
 
-          <div className="rounded-3xl border border-dashed border-slate-200 bg-white p-8 text-center dark:border-slate-800 dark:bg-slate-900/60">
-            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-slate-100 text-slate-400 dark:bg-slate-800">
+          <div className="rounded-3xl border border-dashed border-[var(--color-border)] bg-[var(--color-bg-surface)] p-8 text-center">
+            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-[var(--color-bg-subtle)] text-[var(--color-text-muted)]">
               <Calendar className="h-6 w-6" />
             </div>
-            <p className="mt-3 text-sm font-semibold text-slate-700 dark:text-slate-200">
+            <p className="mt-3 text-sm font-semibold text-[var(--color-text-primary)]">
               {t('dashboard.noActivePlan')}
             </p>
-            <p className="mt-1 text-xs text-slate-400 dark:text-slate-400 max-w-xs mx-auto">
+            <p className="mt-1 text-xs text-[var(--color-text-muted)] max-w-xs mx-auto">
               {t('dashboard.noActivePlanDesc')}
             </p>
           </div>
@@ -98,10 +98,10 @@ export function DashboardPage() {
     <PageContainer title={t('app.dashboard')}>
       <div className="space-y-4">
         {/* Monthly Budget Card */}
-        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-slate-900 to-slate-850 p-6 text-white shadow-xl dark:border dark:border-slate-800/80">
+        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-slate-900 via-slate-850 to-blue-950 p-6 text-white shadow-xl border border-slate-800/80">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-white/10 text-cyan-300">
+              <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-white/10 text-blue-400">
                 <Wallet className="h-3.5 w-3.5" />
               </div>
               <span className="text-xs font-semibold uppercase tracking-wider text-slate-300">
@@ -110,7 +110,7 @@ export function DashboardPage() {
             </div>
             <Link
               to="/plan"
-              className="text-xs font-medium text-cyan-400 transition-colors hover:text-cyan-300"
+              className="text-xs font-medium text-blue-400 transition-colors hover:text-blue-300"
             >
               {t('dashboard.editPlan')} →
             </Link>
@@ -127,7 +127,7 @@ export function DashboardPage() {
               <p className="text-xs text-slate-400">{t('dashboard.remaining')}</p>
               <p
                 className={`text-xl font-bold amount-display ${
-                  summary.isOverBudget ? 'text-rose-400' : 'text-emerald-400'
+                  summary.isOverBudget ? 'text-[var(--color-expense)]' : 'text-[var(--color-income)]'
                 }`}
               >
                 {formatVnd(summary.remainingVnd)}
@@ -144,7 +144,7 @@ export function DashboardPage() {
             <div className="h-2.5 w-full overflow-hidden rounded-full bg-slate-800/80 p-0.5">
               <div
                 className={`h-full rounded-full transition-all duration-500 ${
-                  summary.isOverBudget ? 'bg-rose-500' : 'bg-gradient-to-r from-cyan-400 to-emerald-400'
+                  summary.isOverBudget ? 'bg-[var(--color-expense)]' : 'bg-gradient-to-r from-blue-500 to-emerald-400'
                 }`}
                 style={{ width: `${percentSpent}%` }}
               />
@@ -153,16 +153,16 @@ export function DashboardPage() {
         </div>
 
         {/* Today's Spending Allowance */}
-        <div className="rounded-3xl border border-slate-100 bg-white p-5 shadow-xs transition-colors dark:border-slate-800 dark:bg-slate-900">
+        <div className="rounded-3xl border border-[var(--color-border)] bg-[var(--color-bg-surface)] p-5 shadow-2xs transition-colors">
           <div className="flex items-center justify-between">
             <div>
               <div className="flex items-center gap-1.5">
-                <TrendingUp className="h-3.5 w-3.5 text-slate-400 dark:text-slate-400" />
-                <p className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                <TrendingUp className="h-3.5 w-3.5 text-[var(--color-text-muted)]" />
+                <p className="text-xs font-semibold uppercase tracking-wider text-[var(--color-text-secondary)]">
                   {t('dashboard.todayDailyBudget')}
                 </p>
               </div>
-              <p className="mt-1 text-2xl font-bold text-slate-900 amount-display dark:text-white">
+              <p className="mt-1 text-2xl font-bold text-[var(--color-text-primary)] amount-display">
                 {formatVnd(summary.dailyBudgetVnd)}
               </p>
             </div>
@@ -171,8 +171,8 @@ export function DashboardPage() {
               <div
                 className={`flex items-center gap-1 rounded-full px-3 py-1 text-xs font-bold ${
                   todayStatus.isOverBudget
-                    ? 'bg-rose-50 text-rose-700 border border-rose-200 dark:bg-rose-950/40 dark:text-rose-300 dark:border-rose-900/60'
-                    : 'bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-900/60'
+                    ? 'bg-[var(--color-expense-soft)] text-[var(--color-expense)] border border-[var(--color-expense-border)]'
+                    : 'bg-[var(--color-income-soft)] text-[var(--color-income)] border border-[var(--color-income-border)]'
                 }`}
               >
                 {todayStatus.isOverBudget ? (
@@ -191,20 +191,20 @@ export function DashboardPage() {
           </div>
 
           {todayStatus && (
-            <div className="mt-3.5 grid grid-cols-2 gap-2 border-t border-slate-100 pt-3 text-xs dark:border-slate-800">
+            <div className="mt-3.5 grid grid-cols-2 gap-2 border-t border-[var(--color-border)] pt-3 text-xs">
               <div>
-                <span className="text-slate-400">{t('dashboard.todaySpent')}:</span>
-                <p className="mt-0.5 font-bold text-slate-700 amount-display dark:text-slate-200">
+                <span className="text-[var(--color-text-muted)]">{t('dashboard.todaySpent')}:</span>
+                <p className="mt-0.5 font-bold text-[var(--color-text-primary)] amount-display">
                   {formatVnd(todayStatus.spentVnd)}
                 </p>
               </div>
               <div>
-                <span className="text-slate-400">{t('dashboard.todayRemaining')}:</span>
+                <span className="text-[var(--color-text-muted)]">{t('dashboard.todayRemaining')}:</span>
                 <p
                   className={`mt-0.5 font-bold amount-display ${
                     todayStatus.remainingVnd < 0
-                      ? 'text-rose-600 dark:text-rose-400'
-                      : 'text-emerald-600 dark:text-emerald-400'
+                      ? 'text-[var(--color-expense)]'
+                      : 'text-[var(--color-income)]'
                   }`}
                 >
                   {formatVnd(todayStatus.remainingVnd)}
@@ -218,29 +218,29 @@ export function DashboardPage() {
         <div className="grid grid-cols-2 gap-3">
           <Link
             to="/transactions"
-            className="flex items-center justify-center gap-2 rounded-2xl border border-slate-200/80 bg-white p-4 font-bold text-slate-800 shadow-xs transition-all hover:bg-slate-50 active:scale-[0.98] dark:border-slate-800 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-850 touch-target"
+            className="flex items-center justify-center gap-2 rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg-surface)] p-4 font-bold text-[var(--color-text-primary)] shadow-2xs transition-all hover:bg-[var(--color-bg-subtle)] active:scale-[0.98] touch-target"
           >
-            <PlusCircle className="h-4 w-4 text-cyan-500" />
+            <PlusCircle className="h-4 w-4 text-[var(--color-primary)]" />
             <span className="text-sm">{t('dashboard.addExpense')}</span>
           </Link>
           <Link
             to="/plan"
-            className="flex items-center justify-center gap-2 rounded-2xl border border-slate-200/80 bg-white p-4 font-bold text-slate-800 shadow-xs transition-all hover:bg-slate-50 active:scale-[0.98] dark:border-slate-800 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-850 touch-target"
+            className="flex items-center justify-center gap-2 rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg-surface)] p-4 font-bold text-[var(--color-text-primary)] shadow-2xs transition-all hover:bg-[var(--color-bg-subtle)] active:scale-[0.98] touch-target"
           >
-            <SlidersHorizontal className="h-4 w-4 text-slate-500 dark:text-slate-400" />
+            <SlidersHorizontal className="h-4 w-4 text-[var(--color-text-secondary)]" />
             <span className="text-sm">{t('dashboard.manageBudget')}</span>
           </Link>
         </div>
 
         {/* Recent Transactions */}
-        <div className="rounded-3xl border border-slate-100 bg-white p-5 shadow-xs transition-colors dark:border-slate-800 dark:bg-slate-900 space-y-3">
+        <div className="rounded-3xl border border-[var(--color-border)] bg-[var(--color-bg-surface)] p-5 shadow-2xs transition-colors space-y-3">
           <div className="flex items-center justify-between">
-            <h3 className="text-sm font-bold text-slate-900 dark:text-white">
+            <h3 className="text-sm font-bold text-[var(--color-text-primary)]">
               {t('dashboard.recentExpenses')}
             </h3>
             <Link
               to="/transactions"
-              className="text-xs font-semibold text-cyan-600 hover:text-cyan-700 dark:text-cyan-400 dark:hover:text-cyan-300"
+              className="text-xs font-semibold text-[var(--color-primary)] hover:underline"
             >
               {t('dashboard.viewAll')} →
             </Link>
@@ -248,27 +248,27 @@ export function DashboardPage() {
 
           {recentTransactions.length === 0 ? (
             <div className="py-6 text-center">
-              <Receipt className="mx-auto h-8 w-8 text-slate-300 dark:text-slate-400" />
-              <p className="mt-2 text-xs text-slate-400 dark:text-slate-400">
+              <Receipt className="mx-auto h-8 w-8 text-[var(--color-text-muted)]" />
+              <p className="mt-2 text-xs text-[var(--color-text-muted)]">
                 {t('dashboard.noExpensesYet')}
               </p>
             </div>
           ) : (
-            <div className="divide-y divide-slate-100 dark:divide-slate-800/80">
+            <div className="divide-y divide-[var(--color-border)]">
               {recentTransactions.map((tx) => (
                 <div key={tx.id} className="flex items-center justify-between py-2.5">
                   <div className="flex items-center gap-2.5">
                     <span className="text-base">{tx.categoryIcon}</span>
                     <div>
-                      <p className="text-xs font-bold text-slate-800 dark:text-slate-200">
+                      <p className="text-xs font-bold text-[var(--color-text-primary)]">
                         {tx.categoryName}
                       </p>
-                      <p className="text-[11px] text-slate-400 dark:text-slate-400">
+                      <p className="text-[11px] text-[var(--color-text-muted)]">
                         {tx.date} {tx.description && `• ${tx.description}`}
                       </p>
                     </div>
                   </div>
-                  <span className="text-xs font-bold text-slate-900 amount-display dark:text-slate-100">
+                  <span className="text-xs font-bold text-[var(--color-expense)] amount-display">
                     -{formatVnd(tx.amountVnd)}
                   </span>
                 </div>
