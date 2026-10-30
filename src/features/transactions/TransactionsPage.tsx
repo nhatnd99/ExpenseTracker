@@ -151,7 +151,7 @@ export function TransactionsPage() {
 
   return (
     <PageContainer title={t('transactions.dailyExpenses', 'Chi Tiêu Theo Ngày')}>
-      <div className="space-y-4 pb-20">
+      <div className="space-y-4 pb-6 w-full min-w-0 max-w-full">
         {/* Date Selector Navigation Bar */}
         <div className="rounded-3xl border border-[var(--color-border)] bg-[var(--color-bg-surface)] p-3.5 shadow-2xs transition-colors">
           <div className="flex items-center justify-between gap-2">

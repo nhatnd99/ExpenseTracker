@@ -73,10 +73,10 @@ export const CategoryManagerModal: React.FC<CategoryManagerModalProps> = ({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-xs p-0 sm:p-4">
-      <div className="w-full max-w-lg rounded-t-3xl sm:rounded-3xl border border-[var(--color-border)] bg-[var(--color-bg-surface)] p-5 pb-[calc(env(safe-area-inset-bottom,0px)+1.5rem)] sm:pb-5 shadow-2xl max-h-[85vh] flex flex-col">
-        {/* Header */}
-        <div className="flex items-center justify-between border-b border-[var(--color-border)] pb-3">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-xs p-0 sm:p-4 overflow-hidden">
+      <div className="w-full max-w-lg rounded-t-3xl sm:rounded-3xl border border-[var(--color-border)] bg-[var(--color-bg-surface)] p-5 pb-[calc(env(safe-area-inset-bottom,0px)+1.5rem)] sm:pb-5 shadow-2xl max-h-[85dvh] flex flex-col overflow-hidden">
+        {/* Header - Fixed */}
+        <div className="shrink-0 flex items-center justify-between border-b border-[var(--color-border)] pb-3">
           <h2 className="text-base font-bold text-[var(--color-text-primary)]">
             {t('transactions.categoryManagerTitle', 'Quản Lý Danh Mục')}
           </h2>
@@ -89,8 +89,8 @@ export const CategoryManagerModal: React.FC<CategoryManagerModalProps> = ({
           </button>
         </div>
 
-        {/* Content scroll area */}
-        <div className="flex-1 overflow-y-auto py-4 space-y-4">
+        {/* Content scroll area - Vertical Scroll Only */}
+        <div className="flex-1 overflow-y-auto overflow-x-hidden w-full max-w-full py-4 space-y-4 overscroll-y-contain">
           {/* Add form */}
           <form onSubmit={handleAdd} className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg-subtle)] p-3.5 space-y-3">
             <span className="text-xs font-bold text-[var(--color-text-secondary)] uppercase tracking-wider">
@@ -200,8 +200,8 @@ export const CategoryManagerModal: React.FC<CategoryManagerModalProps> = ({
           </div>
         </div>
 
-        {/* Footer */}
-        <div className="pt-2">
+        {/* Footer - Fixed */}
+        <div className="shrink-0 pt-2">
           <button
             type="button"
             onClick={onClose}

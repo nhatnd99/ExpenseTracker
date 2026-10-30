@@ -127,10 +127,10 @@ export const CreateExpenseModal: React.FC<CreateExpenseModalProps> = ({
 
   return (
     <>
-      <div className="fixed inset-0 z-40 flex flex-col justify-end bg-black/60 backdrop-blur-xs">
-        <div className="w-full max-w-lg mx-auto rounded-t-3xl border-t border-[var(--color-border)] bg-[var(--color-bg-surface)] shadow-2xl flex flex-col max-h-[94vh]">
-          {/* Header */}
-          <div className="flex items-center justify-between px-5 pt-4 pb-2 border-b border-[var(--color-border)]">
+      <div className="fixed inset-0 z-40 flex flex-col justify-end bg-black/60 backdrop-blur-xs overflow-hidden">
+        <div className="w-full max-w-lg mx-auto rounded-t-3xl border-t border-[var(--color-border)] bg-[var(--color-bg-surface)] shadow-2xl flex flex-col max-h-[92dvh] h-auto overflow-hidden">
+          {/* Header - Fixed (shrink-0) */}
+          <div className="shrink-0 flex items-center justify-between px-5 pt-4 pb-2 border-b border-[var(--color-border)]">
             <h2 className="text-sm font-bold text-[var(--color-text-primary)]">
               {isEditMode
                 ? t('transactions.editExpenseTitle', 'Chỉnh Sửa Khoản Chi')
@@ -161,8 +161,8 @@ export const CreateExpenseModal: React.FC<CreateExpenseModalProps> = ({
             </div>
           </div>
 
-          {/* Body Scrollable Area */}
-          <div className="flex-1 overflow-y-auto px-5 py-3 space-y-4">
+          {/* Body Scrollable Area - Vertical Scroll Only, No Horizontal Scroll */}
+          <div className="flex-1 overflow-y-auto overflow-x-hidden w-full max-w-full px-5 py-3 space-y-4 overscroll-y-contain">
             {/* Amount Hero Display */}
             <div className="text-center py-2">
               <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--color-text-muted)]">
@@ -177,43 +177,46 @@ export const CreateExpenseModal: React.FC<CreateExpenseModalProps> = ({
               </div>
             </div>
 
-            {/* Date Selection */}
-            <div className="flex items-center justify-between rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg-subtle)] p-2 text-xs">
-              <div className="flex items-center gap-1.5 px-2">
-                <CalendarIcon className="h-4 w-4 text-[var(--color-text-muted)]" />
-                <span className="font-semibold text-[var(--color-text-secondary)]">
-                  {t('transactions.dateLabel', 'Ngày')}:
+            {/* Date Selection - Fully responsive, zero horizontal overflow */}
+            <div className="space-y-1.5 w-full min-w-0 max-w-full">
+              <div className="flex items-center justify-between text-xs px-1">
+                <span className="font-bold uppercase tracking-wider text-[var(--color-text-secondary)] flex items-center gap-1.5">
+                  <CalendarIcon className="h-3.5 w-3.5 text-[var(--color-text-muted)] shrink-0" />
+                  {t('transactions.dateLabel', 'Ngày')}
                 </span>
+                <div className="flex items-center gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => handleQuickDate(0)}
+                    className={`rounded-xl px-2.5 py-1 text-xs font-semibold transition-all cursor-pointer ${
+                      date === todayStr
+                        ? 'bg-[var(--color-primary)] text-white shadow-2xs'
+                        : 'bg-[var(--color-bg-subtle)] text-[var(--color-text-secondary)] hover:bg-[var(--color-border)]'
+                    }`}
+                  >
+                    {t('transactions.today', 'Hôm nay')}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleQuickDate(1)}
+                    className={`rounded-xl px-2.5 py-1 text-xs font-semibold transition-all cursor-pointer ${
+                      date !== todayStr
+                        ? 'bg-[var(--color-primary)] text-white shadow-2xs'
+                        : 'bg-[var(--color-bg-subtle)] text-[var(--color-text-secondary)] hover:bg-[var(--color-border)]'
+                    }`}
+                  >
+                    {t('transactions.yesterday', 'Hôm qua')}
+                  </button>
+                </div>
               </div>
 
-              <div className="flex items-center gap-1">
-                <button
-                  type="button"
-                  onClick={() => handleQuickDate(0)}
-                  className={`rounded-xl px-2.5 py-1 font-semibold transition-all cursor-pointer ${
-                    date === todayStr
-                      ? 'bg-[var(--color-primary)] text-white shadow-2xs'
-                      : 'text-[var(--color-text-secondary)] hover:bg-[var(--color-border)]'
-                  }`}
-                >
-                  {t('transactions.today', 'Hôm nay')}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleQuickDate(1)}
-                  className={`rounded-xl px-2.5 py-1 font-semibold transition-all cursor-pointer ${
-                    date !== todayStr
-                      ? 'bg-[var(--color-primary)] text-white shadow-2xs'
-                      : 'text-[var(--color-text-secondary)] hover:bg-[var(--color-border)]'
-                  }`}
-                >
-                  {t('transactions.yesterday', 'Hôm qua')}
-                </button>
+              {/* Full-width responsive Date Input */}
+              <div className="w-full min-w-0 max-w-full">
                 <input
                   type="date"
                   value={date}
                   onChange={(e) => setDate(e.target.value)}
-                  className="rounded-xl border border-[var(--color-border)] bg-[var(--color-bg-surface)] px-2 py-1 text-base sm:text-xs font-semibold text-[var(--color-text-primary)] focus:outline-none"
+                  className="w-full min-w-0 max-w-full box-border rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg-subtle)] px-3.5 py-2.5 text-base sm:text-sm font-semibold text-[var(--color-text-primary)] focus:bg-[var(--color-bg-surface)] focus:border-[var(--color-border-focused)] focus:outline-none transition-colors"
                 />
               </div>
             </div>
@@ -240,21 +243,23 @@ export const CreateExpenseModal: React.FC<CreateExpenseModalProps> = ({
             )}
           </div>
 
-          {/* Custom Numpad Fixed At Bottom with Safe-Area Padding */}
-          <CustomNumpad
-            onKeyPress={handleKeyPress}
-            onDelete={handleDelete}
-            onClear={handleClear}
-            onSubmit={() => void handleSubmit()}
-            isSubmitDisabled={submitting || numericAmount <= 0}
-            submitLabel={
-              submitting
-                ? t('transactions.saving', 'Đang lưu…')
-                : isEditMode
-                  ? t('transactions.updateExpense', 'Cập Nhật')
-                  : t('transactions.saveExpense', 'Lưu Chi Tiêu')
-            }
-          />
+          {/* Custom Numpad Fixed At Bottom (shrink-0) with Safe-Area Padding */}
+          <div className="shrink-0 w-full">
+            <CustomNumpad
+              onKeyPress={handleKeyPress}
+              onDelete={handleDelete}
+              onClear={handleClear}
+              onSubmit={() => void handleSubmit()}
+              isSubmitDisabled={submitting || numericAmount <= 0}
+              submitLabel={
+                submitting
+                  ? t('transactions.saving', 'Đang lưu…')
+                  : isEditMode
+                    ? t('transactions.updateExpense', 'Cập Nhật')
+                    : t('transactions.saveExpense', 'Lưu Chi Tiêu')
+              }
+            />
+          </div>
         </div>
       </div>
 

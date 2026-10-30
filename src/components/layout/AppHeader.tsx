@@ -25,8 +25,7 @@ export function AppHeader() {
 
   return (
     <header
-      className="sticky top-0 z-20 border-b border-[var(--color-border)] bg-[var(--color-bg-surface)]/90 backdrop-blur-md transition-colors duration-200"
-      style={{ paddingTop: 'env(safe-area-inset-top)' }}
+      className="shrink-0 z-20 w-full border-b border-[var(--color-border)] bg-[var(--color-bg-surface)]/90 backdrop-blur-md transition-colors duration-200 pt-[env(safe-area-inset-top,0px)]"
     >
       <div className="mx-auto flex h-14 max-w-lg items-center justify-between px-4">
         <div className="flex items-center gap-2.5">

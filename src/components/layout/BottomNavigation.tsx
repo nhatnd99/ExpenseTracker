@@ -14,7 +14,7 @@ export function BottomNavigation() {
 
   return (
     <nav
-      className="sticky bottom-0 z-20 border-t border-[var(--color-border)] bg-[var(--color-bg-surface)]/95 backdrop-blur-md transition-colors duration-200"
+      className="shrink-0 z-20 w-full border-t border-[var(--color-border)] bg-[var(--color-bg-surface)]/95 backdrop-blur-md transition-colors duration-200 pb-[env(safe-area-inset-bottom,0px)]"
       aria-label="Main navigation"
     >
       <div className="mx-auto max-w-lg">
