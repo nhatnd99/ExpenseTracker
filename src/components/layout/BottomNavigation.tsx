@@ -1,15 +1,15 @@
 import { NavLink } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { LayoutDashboard, SlidersHorizontal, Receipt, BarChart3 } from 'lucide-react'
+import { LayoutDashboard, Receipt, BarChart3, Settings } from 'lucide-react'
 
 export function BottomNavigation() {
   const { t } = useTranslation()
 
   const navItems = [
     { to: '/', label: t('nav.dashboard'), icon: LayoutDashboard },
-    { to: '/plan', label: t('nav.plan'), icon: SlidersHorizontal },
     { to: '/transactions', label: t('nav.expenses'), icon: Receipt },
     { to: '/reports', label: t('nav.reports'), icon: BarChart3 },
+    { to: '/settings', label: t('nav.settings', 'Cài đặt'), icon: Settings },
   ] as const
 
   return (

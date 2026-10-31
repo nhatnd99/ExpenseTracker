@@ -29,6 +29,15 @@ export const transactionRepository = {
     return txs.sort((a, b) => b.createdAt.localeCompare(a.createdAt))
   },
 
+  /** Returns transactions between startDate and endDate inclusive (across any plan) */
+  async findByDateRange(startDate: DateString, endDate: DateString): Promise<Transaction[]> {
+    const txs = await db.transactions
+      .where('date')
+      .between(startDate, endDate, true, true)
+      .toArray()
+    return txs.sort((a, b) => a.date.localeCompare(b.date))
+  },
+
   /** Returns all transactions for a category */
   async findByCategoryId(categoryId: string): Promise<Transaction[]> {
     return db.transactions.where('categoryId').equals(categoryId).toArray()

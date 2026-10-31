@@ -11,7 +11,8 @@
     "dashboard": "Dashboard",
     "plan": "Plan",
     "expenses": "Expenses",
-    "reports": "Reports"
+    "reports": "Reports",
+    "settings": "Settings"
   },
   "common": {
     "loading": "Loading…",
@@ -129,12 +130,44 @@
     "deleteSuccess": "Expense deleted successfully!"
   },
   "reports": {
-    "title": "Financial Reports",
-    "reportMonth": "Report Month",
+    "title": "Cycle Expense Report",
+    "reportMonth": "Cycle Month",
+    "payDaySetting": "Payday",
+    "paydayCycle": "Payday Cycle",
+    "cycleRange": "{{start}} to {{end}} ({{days}} days)",
+    "budget": "Budget",
     "totalSpent": "Total Spent",
-    "noRecords": "No expense records found",
-    "noRecordsDesc": "Transactions recorded in {{month}} will be categorized and analyzed here.",
-    "spendingByCategory": "Spending by Category"
+    "remaining": "Remaining",
+    "onTrack": "On Track",
+    "offTrack": "Off Track",
+    "dailyBudget": "Daily Limit",
+    "elapsedProgress": "Day {{elapsed}} of {{total}}",
+    "calendarTitle": "Cycle Spending Calendar",
+    "spendingByCategory": "Spending by Category",
+    "noRecords": "No expense records found in this cycle",
+    "noRecordsDesc": "Transactions recorded between {{start}} and {{end}} will be summarized here.",
+    "spent": "Spent",
+    "balance": "Balance",
+    "currentCycle": "Current Cycle",
+    "dayDetailsTitle": "Expenses on",
+    "dayTotalSpent": "Total spent on this day",
+    "tapDayToView": "Tap any day to view & edit expenses",
+    "weekdays": {
+      "mon": "Mon",
+      "tue": "Tue",
+      "wed": "Wed",
+      "thu": "Thu",
+      "fri": "Fri",
+      "sat": "Sat",
+      "sun": "Sun"
+    }
+  },
+  "settings": {
+    "title": "Settings",
+    "paydayHelp": "Cycle start date for report calculations (Default: 1st of each month)",
+    "quickSelect": "Quick select:",
+    "customDay": "Or choose any day of the month (1 - 28):",
+    "cycleActive": "Active cycle for today:"
   },
   "theme": {
     "toggleTheme": "Toggle color theme",

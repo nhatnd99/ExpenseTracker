@@ -12,12 +12,13 @@ export function AppHeader() {
     switch (pathname) {
       case '/':
         return t('app.dashboard')
-      case '/plan':
-        return t('app.plan')
       case '/transactions':
         return t('app.transactions')
       case '/reports':
         return t('app.reports')
+      case '/settings':
+      case '/plan':
+        return t('app.settings')
       default:
         return t('app.title')
     }

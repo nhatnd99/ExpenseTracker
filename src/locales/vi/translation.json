@@ -11,7 +11,8 @@
     "dashboard": "Tổng quan",
     "plan": "Kế hoạch",
     "expenses": "Chi tiêu",
-    "reports": "Báo cáo"
+    "reports": "Báo cáo",
+    "settings": "Cài đặt"
   },
   "common": {
     "loading": "Đang tải…",
@@ -129,12 +130,44 @@
     "deleteSuccess": "Đã xóa khoản chi!"
   },
   "reports": {
-    "title": "Báo Cáo Tài Chính",
-    "reportMonth": "Tháng Báo Cáo",
-    "totalSpent": "Tổng Đã Tiêu",
-    "noRecords": "Không tìm thấy dữ liệu chi tiêu",
-    "noRecordsDesc": "Các khoản chi trong {{month}} sẽ được phân loại và hiển thị biểu đồ tại đây.",
-    "spendingByCategory": "Tỷ Trọng Theo Danh Mục"
+    "title": "Báo Cáo Chi Tiêu Chu Kỳ",
+    "reportMonth": "Tháng Chu Kỳ",
+    "payDaySetting": "Ngày Lĩnh Lương",
+    "paydayCycle": "Chu Kỳ Lương",
+    "cycleRange": "{{start}} đến {{end}} ({{days}} ngày)",
+    "budget": "Hạn Mức",
+    "totalSpent": "Đã Chi",
+    "remaining": "Còn Lại",
+    "onTrack": "Đúng Tiến Độ",
+    "offTrack": "Vượt Tiến Độ",
+    "dailyBudget": "Hạn Mức / Ngày",
+    "elapsedProgress": "Ngày {{elapsed}} / {{total}}",
+    "calendarTitle": "Lịch Chi Tiêu Chu Kỳ",
+    "spendingByCategory": "Tỷ Trọng Theo Danh Mục",
+    "noRecords": "Không tìm thấy dữ liệu chi tiêu trong chu kỳ này",
+    "noRecordsDesc": "Các khoản chi phát sinh từ {{start}} đến {{end}} sẽ được thống kê và hiển thị tại đây.",
+    "spent": "Đã chi",
+    "balance": "Số dư",
+    "currentCycle": "Chu kỳ hiện tại",
+    "dayDetailsTitle": "Chi Tiêu Ngày",
+    "dayTotalSpent": "Tổng chi trong ngày",
+    "tapDayToView": "Chạm vào ô ngày để xem & sửa chi tiêu",
+    "weekdays": {
+      "mon": "T2",
+      "tue": "T3",
+      "wed": "T4",
+      "thu": "T5",
+      "fri": "T6",
+      "sat": "T7",
+      "sun": "CN"
+    }
+  },
+  "settings": {
+    "title": "Cài Đặt",
+    "paydayHelp": "Ngày bắt đầu chu kỳ tính toán báo cáo (Mặc định: ngày 1 hàng tháng)",
+    "quickSelect": "Chọn nhanh:",
+    "customDay": "Hoặc chọn ngày bất kỳ trong tháng (1 - 28):",
+    "cycleActive": "Chu kỳ đang áp dụng cho hôm nay:"
   },
   "theme": {
     "toggleTheme": "Đổi chế độ giao diện",

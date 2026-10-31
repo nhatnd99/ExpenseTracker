@@ -5,6 +5,7 @@
 import { useEffect, type ReactNode } from 'react'
 import { seedDefaultCategories } from '@/db/seed'
 import { ThemeProvider } from '@/context/ThemeContext'
+import { SettingsProvider } from '@/context/SettingsContext'
 
 interface ProvidersProps {
   children: ReactNode
@@ -16,5 +17,9 @@ export function Providers({ children }: ProvidersProps) {
     void seedDefaultCategories()
   }, [])
 
-  return <ThemeProvider>{children}</ThemeProvider>
+  return (
+    <ThemeProvider>
+      <SettingsProvider>{children}</SettingsProvider>
+    </ThemeProvider>
+  )
 }

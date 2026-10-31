@@ -65,7 +65,7 @@ export function DashboardPage() {
               {t('dashboard.welcomeDesc')}
             </p>
             <Link
-              to="/plan"
+              to="/settings"
               className="mt-5 inline-flex items-center gap-2 rounded-2xl bg-[var(--color-primary)] px-5 py-3.5 text-sm font-bold text-white shadow-md transition-transform hover:bg-[var(--color-primary-hover)] active:scale-[0.98] cursor-pointer"
             >
               <span>{t('dashboard.setupPlanBtn')}</span>
@@ -109,7 +109,7 @@ export function DashboardPage() {
               </span>
             </div>
             <Link
-              to="/plan"
+              to="/settings"
               className="text-xs font-medium text-blue-400 transition-colors hover:text-blue-300"
             >
               {t('dashboard.editPlan')} →
@@ -224,7 +224,7 @@ export function DashboardPage() {
             <span className="text-sm">{t('dashboard.addExpense')}</span>
           </Link>
           <Link
-            to="/plan"
+            to="/settings"
             className="flex items-center justify-center gap-2 rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg-surface)] p-4 font-bold text-[var(--color-text-primary)] shadow-2xs transition-all hover:bg-[var(--color-bg-subtle)] active:scale-[0.98] touch-target"
           >
             <SlidersHorizontal className="h-4 w-4 text-[var(--color-text-secondary)]" />
