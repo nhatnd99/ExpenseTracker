@@ -72,7 +72,19 @@
     "cat_expenses": "Chi Tiêu Hàng Ngày",
     "cat_savings": "Tiết Kiệm",
     "cat_investment": "Đầu Tư",
-    "cat_emergency": "Quỹ Khẩn Cấp"
+    "cat_emergency": "Quỹ Khẩn Cấp",
+    "addCategory": "Thêm danh mục",
+    "deleteCategory": "Xóa danh mục",
+    "categoryNamePlaceholder": "Tên danh mục",
+    "unallocated": "Còn {{percent}}% chưa phân bổ",
+    "overAllocated": "Vượt quá {{percent}}%",
+    "allocated100": "Đã đủ 100%",
+    "dragToReorder": "Kéo thả hoặc dùng mũi tên để sắp xếp",
+    "moveUp": "Lên",
+    "moveDown": "Xuống",
+    "ratio": "Tỷ lệ:",
+    "newCategoryDefaultName": "Danh mục mới {{index}}",
+    "saveError": "Lỗi khi lưu kế hoạch ngân sách."
   },
   "transactions": {
     "title": "Ghi Chép Chi Tiêu",
@@ -164,10 +176,21 @@
   },
   "settings": {
     "title": "Cài Đặt",
+    "compactPayday": "Ngày bắt đầu chu kỳ (Payday)",
     "paydayHelp": "Ngày bắt đầu chu kỳ tính toán báo cáo (Mặc định: ngày 1 hàng tháng)",
     "quickSelect": "Chọn nhanh:",
     "customDay": "Hoặc chọn ngày bất kỳ trong tháng (1 - 28):",
-    "cycleActive": "Chu kỳ đang áp dụng cho hôm nay:"
+    "cycleActive": "Chu kỳ đang áp dụng cho hôm nay:",
+    "dayOption": "Ngày {{day}}",
+    "selectDayLabel": "Chọn ngày bất kỳ trong tháng (1 - 28):"
+  },
+  "categoryIcons": {
+    "groupFood": "Ăn uống & Sinh hoạt",
+    "groupTransport": "Di chuyển & Đi lại",
+    "groupHousing": "Nhà cửa & Hóa đơn",
+    "groupHealth": "Cá nhân & Y tế",
+    "groupEntertainment": "Giải trí & Xã hội",
+    "groupFinance": "Tài chính & Đầu tư"
   },
   "theme": {
     "toggleTheme": "Đổi chế độ giao diện",

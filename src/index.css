@@ -159,6 +159,17 @@
     min-width: 0;
     box-sizing: border-box;
   }
+
+  /* Hide HTML5 number input spin buttons across WebKit, Blink, and Gecko */
+  input[type="number"]::-webkit-outer-spin-button,
+  input[type="number"]::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+  input[type="number"] {
+    -moz-appearance: textfield;
+    appearance: textfield;
+  }
 }
 
 @layer components {

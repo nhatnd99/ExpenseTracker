@@ -2,6 +2,7 @@ import React from 'react'
 import { useTranslation } from 'react-i18next'
 import { Plus } from 'lucide-react'
 import type { BudgetCategory } from '@/types/models'
+import { CategoryIconRenderer } from '@/components/ui/CategoryIconRenderer'
 
 interface CategorySelectorProps {
   categories: BudgetCategory[]
@@ -48,7 +49,9 @@ export const CategorySelector: React.FC<CategorySelectorProps> = ({
                   : 'border-[var(--color-border)] bg-[var(--color-bg-surface)] text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-subtle)]'
               }`}
             >
-              <span className="text-2xl mb-1">{cat.icon}</span>
+              <span className="flex h-7 w-7 items-center justify-center mb-1">
+                <CategoryIconRenderer icon={cat.icon} size={22} />
+              </span>
               <span className="text-[11px] truncate w-full text-center tracking-tight">
                 {cat.name}
               </span>
@@ -65,7 +68,7 @@ export const CategorySelector: React.FC<CategorySelectorProps> = ({
           <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-[var(--color-bg-surface)] text-sm mb-1">
             <Plus className="h-4 w-4" />
           </div>
-          <span className="text-[11px] tracking-tight">Thêm</span>
+          <span className="text-[11px] tracking-tight">{t('common.add', 'Thêm')}</span>
         </button>
       </div>
     </div>

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import {
@@ -14,21 +14,24 @@ import {
   Sparkles,
 } from 'lucide-react'
 import { PageContainer } from '@/components/layout/PageContainer'
-import { useCurrentMonth } from '@/hooks/useCurrentMonth'
+import { useSettings } from '@/context/useSettings'
 import { getDashboardData, type DashboardData } from './dashboardService'
-import { formatVnd } from '@/services/dateService'
+import { formatVnd, getTodayString } from '@/services/dateService'
+import { getCycleMonthForDate } from '@/features/reports/paydayCycle'
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner'
 
 export function DashboardPage() {
   const { t } = useTranslation()
-  const currentMonth = useCurrentMonth()
+  const { payDay } = useSettings()
+  const todayStr = useMemo(() => getTodayString(), [])
+  const currentCycleMonth = useMemo(() => getCycleMonthForDate(todayStr, payDay), [todayStr, payDay])
   const [data, setData] = useState<DashboardData | null>(null)
   const [loading, setLoading] = useState<boolean>(true)
 
   useEffect(() => {
     let active = true
 
-    getDashboardData(currentMonth)
+    getDashboardData(currentCycleMonth, payDay, todayStr)
       .then((res) => {
         if (active) setData(res)
       })
@@ -39,7 +42,7 @@ export function DashboardPage() {
     return () => {
       active = false
     }
-  }, [currentMonth])
+  }, [currentCycleMonth, payDay, todayStr])
 
   if (loading) {
     return (
@@ -100,13 +103,20 @@ export function DashboardPage() {
         {/* Monthly Budget Card */}
         <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-slate-900 via-slate-850 to-blue-950 p-6 text-white shadow-xl border border-slate-800/80">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-white/10 text-blue-400">
-                <Wallet className="h-3.5 w-3.5" />
+            <div className="flex items-center gap-2.5">
+              <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-white/10 text-blue-400">
+                <Wallet className="h-4 w-4" />
               </div>
-              <span className="text-xs font-semibold uppercase tracking-wider text-slate-300">
-                {t('dashboard.monthlyBudget')} ({summary.month})
-              </span>
+              <div>
+                <span className="text-xs font-semibold uppercase tracking-wider text-slate-300 block">
+                  {t('dashboard.monthlyBudget')}
+                </span>
+                <span className="text-[11px] text-blue-300/90 font-medium font-mono">
+                  {data.cycle
+                    ? `${data.cycle.startDate.slice(8)}/${data.cycle.startDate.slice(5, 7)} – ${data.cycle.endDate.slice(8)}/${data.cycle.endDate.slice(5, 7)}`
+                    : summary.month}
+                </span>
+              </div>
             </div>
             <Link
               to="/settings"

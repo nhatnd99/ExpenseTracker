@@ -72,7 +72,19 @@
     "cat_expenses": "Daily Expenses",
     "cat_savings": "Savings",
     "cat_investment": "Investment",
-    "cat_emergency": "Emergency Fund"
+    "cat_emergency": "Emergency Fund",
+    "addCategory": "Add Category",
+    "deleteCategory": "Delete Category",
+    "categoryNamePlaceholder": "Category name",
+    "unallocated": "{{percent}}% unallocated",
+    "overAllocated": "Over-allocated by {{percent}}%",
+    "allocated100": "Fully allocated (100%)",
+    "dragToReorder": "Drag or use arrows to reorder",
+    "moveUp": "Move up",
+    "moveDown": "Move down",
+    "ratio": "Rate:",
+    "newCategoryDefaultName": "New Category {{index}}",
+    "saveError": "Error saving budget plan."
   },
   "transactions": {
     "title": "Daily Expenses",
@@ -164,10 +176,21 @@
   },
   "settings": {
     "title": "Settings",
+    "compactPayday": "Cycle Start Day (Payday)",
     "paydayHelp": "Cycle start date for report calculations (Default: 1st of each month)",
     "quickSelect": "Quick select:",
     "customDay": "Or choose any day of the month (1 - 28):",
-    "cycleActive": "Active cycle for today:"
+    "cycleActive": "Active cycle for today:",
+    "dayOption": "Day {{day}}",
+    "selectDayLabel": "Select day of month (1 - 28):"
+  },
+  "categoryIcons": {
+    "groupFood": "Food & Dining",
+    "groupTransport": "Transportation",
+    "groupHousing": "Housing & Utilities",
+    "groupHealth": "Personal & Health",
+    "groupEntertainment": "Entertainment & Social",
+    "groupFinance": "Finance & Investment"
   },
   "theme": {
     "toggleTheme": "Toggle color theme",
