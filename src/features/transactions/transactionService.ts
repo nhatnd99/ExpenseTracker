@@ -5,8 +5,15 @@
 import { crypto } from '@/utils/crypto'
 import { transactionRepository } from '@/repositories/transactionRepository'
 import { monthlyPlanRepository } from '@/repositories/monthlyPlanRepository'
+import { allocationRepository } from '@/repositories/allocationRepository'
 import { categoryRepository } from '@/repositories/categoryRepository'
 import { dateToMonthId } from '@/services/dateService'
+import {
+  calculateDailyBudget,
+  calculateTotalBudget,
+  getDaysInMonth,
+  parseMonthId,
+} from '@/domain/budgetCalculator'
 import type { Transaction, DateString, MonthId, BudgetCategory } from '@/types/models'
 
 export interface CreateTransactionInput {
@@ -44,6 +51,28 @@ export async function getTransactionsForDate(date: DateString): Promise<Enriched
       categoryIcon: cat?.icon ?? '💸',
     }
   })
+}
+
+/**
+ * Returns the calculated daily budget (hạn mức chi tiêu mỗi ngày) for a given date.
+ * Based on the user's monthly budget plan and allocation settings for that month.
+ */
+export async function getDailyBudgetForDate(date: DateString): Promise<number> {
+  const month = dateToMonthId(date)
+  const plan = await monthlyPlanRepository.findByMonth(month)
+  if (!plan || plan.incomeVnd <= 0) return 0
+
+  const allocations = await allocationRepository.findByPlanId(plan.id)
+  const expenseAllocations = allocations.filter((a) => a.categoryId === 'cat-expenses')
+  const activeAllocations = expenseAllocations.length > 0 ? expenseAllocations : allocations
+
+  if (activeAllocations.length === 0) return 0
+
+  const totalExpenseBudget = calculateTotalBudget(plan.incomeVnd, activeAllocations)
+  const { year, month: monthNum } = parseMonthId(month)
+  const daysInMonth = getDaysInMonth(year, monthNum)
+
+  return calculateDailyBudget(totalExpenseBudget, daysInMonth)
 }
 
 /**
