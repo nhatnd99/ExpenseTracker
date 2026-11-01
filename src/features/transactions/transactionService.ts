@@ -8,12 +8,8 @@ import { monthlyPlanRepository } from '@/repositories/monthlyPlanRepository'
 import { allocationRepository } from '@/repositories/allocationRepository'
 import { categoryRepository } from '@/repositories/categoryRepository'
 import { dateToMonthId } from '@/services/dateService'
-import {
-  calculateDailyBudget,
-  calculateTotalBudget,
-  getDaysInMonth,
-  parseMonthId,
-} from '@/domain/budgetCalculator'
+import { calculateDailyLimit } from '@/domain/budgetCalculator'
+import { getCycleMonthForDate, getPaydayCycle } from '@/features/reports/paydayCycle'
 import type { Transaction, DateString, MonthId, BudgetCategory } from '@/types/models'
 
 export interface CreateTransactionInput {
@@ -55,24 +51,20 @@ export async function getTransactionsForDate(date: DateString): Promise<Enriched
 
 /**
  * Returns the calculated daily budget (hạn mức chi tiêu mỗi ngày) for a given date.
- * Based on the user's monthly budget plan and allocation settings for that month.
+ * Based on the Daily Expenses category allocation and dynamic cycle days.
  */
-export async function getDailyBudgetForDate(date: DateString): Promise<number> {
-  const month = dateToMonthId(date)
-  const plan = await monthlyPlanRepository.findByMonth(month)
+export async function getDailyBudgetForDate(date: DateString, payDay: number = 1): Promise<number> {
+  const cycleMonth = getCycleMonthForDate(date, payDay)
+  const cycle = getPaydayCycle(cycleMonth, payDay)
+  const plan = await monthlyPlanRepository.findByMonth(cycleMonth)
   if (!plan || plan.incomeVnd <= 0) return 0
 
   const allocations = await allocationRepository.findByPlanId(plan.id)
-  const expenseAllocations = allocations.filter((a) => a.categoryId === 'cat-expenses')
-  const activeAllocations = expenseAllocations.length > 0 ? expenseAllocations : allocations
+  const dailyExpensesAlloc = allocations.find((a) => a.categoryId === 'cat-expenses')
+  const percent = dailyExpensesAlloc ? dailyExpensesAlloc.allocationPercent : 0
+  if (percent <= 0) return 0
 
-  if (activeAllocations.length === 0) return 0
-
-  const totalExpenseBudget = calculateTotalBudget(plan.incomeVnd, activeAllocations)
-  const { year, month: monthNum } = parseMonthId(month)
-  const daysInMonth = getDaysInMonth(year, monthNum)
-
-  return calculateDailyBudget(totalExpenseBudget, daysInMonth)
+  return calculateDailyLimit(plan.incomeVnd, percent, cycle.totalDays)
 }
 
 /**

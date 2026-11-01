@@ -1,5 +1,6 @@
-import { useEffect, useState, useMemo } from 'react'
+import React, { useEffect, useState, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
+import type { TFunction } from 'i18next'
 import {
   Calendar,
   Save,
@@ -10,10 +11,27 @@ import {
   ChevronRight,
   Plus,
   Trash2,
+  Lock,
   GripVertical,
   ChevronUp,
   ChevronDown,
 } from 'lucide-react'
+import {
+  DndContext,
+  closestCenter,
+  TouchSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from '@dnd-kit/core'
+import {
+  SortableContext,
+  verticalListSortingStrategy,
+  useSortable,
+  arrayMove,
+} from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
 import { PageContainer } from '@/components/layout/PageContainer'
 import { useSettings } from '@/context/useSettings'
 import { getTodayString, formatVnd } from '@/services/dateService'
@@ -28,10 +46,7 @@ import {
   saveMonthlyPlan,
   type PlanWithDetails,
 } from '@/features/monthly-plans/monthlyPlanService'
-import {
-  calculateDailyBudget,
-  calculateAllocationAmount,
-} from '@/domain/budgetCalculator'
+import { calculateDailyLimit } from '@/domain/budgetCalculator'
 import { categoryRepository } from '@/repositories/categoryRepository'
 import { CategoryIconRenderer } from '@/components/ui/CategoryIconRenderer'
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner'
@@ -43,14 +58,212 @@ export interface BudgetItemState {
   percent: number
 }
 
+const DEFAULT_CATEGORY_IDS = new Set(['cat-expenses', 'cat-fixed', 'cat-savings'])
+
+function isDefaultCategory(id: string): boolean {
+  return DEFAULT_CATEGORY_IDS.has(id)
+}
+
+function getDefaultCategoryName(id: string, t: TFunction): string {
+  switch (id) {
+    case 'cat-expenses':
+      return t('plan.cat_expenses', { defaultValue: 'Chi Tiêu Hàng Ngày' })
+    case 'cat-fixed':
+      return t('plan.cat_fixed', { defaultValue: 'Chi Phí Cố Định' })
+    case 'cat-savings':
+      return t('plan.cat_savings', { defaultValue: 'Tiết Kiệm' })
+    default:
+      return ''
+  }
+}
+
 const DEFAULT_BUDGET_ITEMS: BudgetItemState[] = [
-  { id: 'cat-expenses', name: 'Daily Expenses', icon: '🛒', percent: 70 },
-  { id: 'cat-savings', name: 'Savings', icon: '🏦', percent: 30 },
+  { id: 'cat-expenses', name: 'Daily Expenses', icon: '🛒', percent: 50 },
+  { id: 'cat-fixed', name: 'Fixed Amount', icon: '🏠', percent: 30 },
+  { id: 'cat-savings', name: 'Savings', icon: '🏦', percent: 20 },
 ]
+
+interface SortableBudgetItemProps {
+  item: BudgetItemState
+  index: number
+  totalItems: number
+  income: number
+  onPercentChange: (id: string, val: string) => void
+  onNameChange: (id: string, newName: string) => void
+  onRemove: (id: string) => void
+  onMove: (index: number, direction: 'up' | 'down') => void
+}
+
+function SortableBudgetItem({
+  item,
+  index,
+  totalItems,
+  income,
+  onPercentChange,
+  onNameChange,
+  onRemove,
+  onMove,
+}: SortableBudgetItemProps) {
+  const { t } = useTranslation()
+  const isDefault = isDefaultCategory(item.id)
+  const allocatedAmount = Math.round(((Number(item.percent) || 0) / 100) * income)
+
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({
+    id: item.id,
+    disabled: isDefault,
+  })
+
+  const style: React.CSSProperties = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    zIndex: isDragging ? 50 : undefined,
+  }
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={`rounded-2xl border bg-[var(--color-bg-subtle)] p-3 space-y-2 transition-all box-border w-full max-w-full ${
+        isDragging
+          ? 'opacity-60 border-2 border-[var(--color-primary)] shadow-lg scale-[1.02]'
+          : 'border-[var(--color-border)] hover:border-[var(--color-border-focused)]/50'
+      }`}
+    >
+      {/* Row 1: Drag handle, Icon, Editable/Locked Name, Quick reorder, Delete */}
+      <div className="flex items-center justify-between gap-2 w-full max-w-full box-border">
+        <div className="flex items-center gap-2 flex-1 min-w-0">
+          {/* Drag Handle: Locked for default categories (Daily Expenses, Fixed Amount, Savings), draggable for custom categories */}
+          {isDefault ? (
+            <div
+              className="p-1 shrink-0 text-[var(--color-text-muted)]"
+              title={t('plan.defaultLocked', 'Hạng mục mặc định cố định')}
+            >
+              <Lock className="h-3.5 w-3.5" />
+            </div>
+          ) : (
+            <button
+              type="button"
+              {...attributes}
+              {...listeners}
+              className="touch-none cursor-grab active:cursor-grabbing text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] p-1 shrink-0 rounded-lg hover:bg-[var(--color-bg-surface)] active:scale-95"
+              style={{ touchAction: 'none' }}
+              title={t('plan.dragToReorder', 'Kéo thả để sắp xếp')}
+              aria-label={t('plan.dragToReorder', 'Kéo thả')}
+            >
+              <GripVertical className="h-4 w-4" />
+            </button>
+          )}
+
+          {/* Category Icon */}
+          <span className="flex h-7 w-7 items-center justify-center rounded-xl bg-[var(--color-bg-surface)] text-sm shadow-2xs shrink-0 text-[var(--color-primary)]">
+            <CategoryIconRenderer icon={item.icon} size={16} />
+          </span>
+
+          {/* Category Name: Locked for default categories, Editable for custom categories */}
+          {isDefault ? (
+            <div className="flex items-center min-w-0 flex-1 gap-1.5">
+              <span className="font-bold text-xs text-[var(--color-text-primary)] truncate">
+                {getDefaultCategoryName(item.id, t)}
+              </span>
+              <span className="text-[10px] font-bold text-[var(--color-primary)] bg-[var(--color-primary-soft)] px-1.5 py-0.5 rounded-md shrink-0 border border-[var(--color-primary)]/20">
+                {t('plan.defaultCategory', 'Mặc định')}
+              </span>
+            </div>
+          ) : (
+            <input
+              type="text"
+              value={item.name}
+              onChange={(e) => onNameChange(item.id, e.target.value)}
+              className="font-bold text-xs text-[var(--color-text-primary)] bg-transparent border-b border-transparent focus:border-[var(--color-border-focused)] focus:outline-none min-w-0 flex-1 truncate"
+              placeholder={t('plan.categoryNamePlaceholder', 'Tên danh mục')}
+            />
+          )}
+        </div>
+
+        {/* Actions: Move Up / Down & Delete (Only for custom categories, hidden for default categories) */}
+        <div className="flex items-center gap-0.5 shrink-0">
+          {!isDefault && (
+            <>
+              <button
+                type="button"
+                disabled={index <= 3}
+                onClick={() => onMove(index, 'up')}
+                className="p-1 text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] disabled:opacity-20 cursor-pointer disabled:cursor-not-allowed"
+                aria-label={t('plan.moveUp', 'Lên')}
+              >
+                <ChevronUp className="h-3.5 w-3.5" />
+              </button>
+              <button
+                type="button"
+                disabled={index === totalItems - 1}
+                onClick={() => onMove(index, 'down')}
+                className="p-1 text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] disabled:opacity-20 cursor-pointer disabled:cursor-not-allowed"
+                aria-label={t('plan.moveDown', 'Xuống')}
+              >
+                <ChevronDown className="h-3.5 w-3.5" />
+              </button>
+
+              <button
+                type="button"
+                onClick={() => onRemove(item.id)}
+                className="p-1 text-[var(--color-text-muted)] hover:text-[var(--color-expense)] cursor-pointer ml-1 rounded-lg hover:bg-[var(--color-expense-soft)] transition-colors"
+                title={t('plan.deleteCategory', 'Xóa danh mục')}
+                aria-label={t('plan.deleteCategory', 'Xóa danh mục')}
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+              </button>
+            </>
+          )}
+        </div>
+      </div>
+
+      {/* Row 2: Direct % Input and Auto-calculated Money */}
+      <div className="flex items-center justify-between gap-3 pt-1 border-t border-[var(--color-border)]/60 w-full max-w-full box-border">
+        {/* % Input */}
+        <div className="flex items-center gap-1.5 shrink-0">
+          <span className="text-[11px] font-semibold text-[var(--color-text-secondary)]">
+            {t('plan.ratio', 'Tỷ lệ:')}
+          </span>
+          <div className="relative flex items-center">
+            <input
+              type="number"
+              min="0"
+              max="100"
+              value={item.percent === 0 ? '' : item.percent}
+              onChange={(e) => onPercentChange(item.id, e.target.value)}
+              placeholder="0"
+              className="w-14 rounded-lg border border-[var(--color-border)] bg-[var(--color-bg-surface)] px-2 py-1 text-center text-xs font-bold text-[var(--color-text-primary)] focus:outline-none focus:border-[var(--color-border-focused)]"
+            />
+            <span className="ml-1 text-xs font-bold text-[var(--color-text-muted)]">
+              %
+            </span>
+          </div>
+        </div>
+
+        {/* Auto-calculated Money Amount */}
+        <div className="text-right min-w-0 flex-1">
+          <span className="text-[10px] text-[var(--color-text-muted)] block truncate">
+            {t('plan.allocatedAmount', 'Số tiền phân bổ')}
+          </span>
+          <span className="text-xs font-bold text-[var(--color-text-primary)] amount-display truncate block">
+            {formatVnd(allocatedAmount)}
+          </span>
+        </div>
+      </div>
+    </div>
+  )
+}
 
 export function SettingsPage() {
   const { t } = useTranslation()
-  const { payDay, setPayDay } = useSettings()
+  const { payDay, setPayDay, refreshDailyLimit } = useSettings()
   const todayStr = useMemo(() => getTodayString(), [])
   const initialCycleMonth = useMemo(() => getCycleMonthForDate(todayStr, payDay), [todayStr, payDay])
 
@@ -65,7 +278,21 @@ export function SettingsPage() {
   // Monthly income & items
   const [income, setIncome] = useState<number>(10_000_000)
   const [items, setItems] = useState<BudgetItemState[]>(DEFAULT_BUDGET_ITEMS)
-  const [draggedIndex, setDraggedIndex] = useState<number | null>(null)
+
+  // DND Sensors configured specifically for iOS Safari and mobile PWA
+  const sensors = useSensors(
+    useSensor(TouchSensor, {
+      activationConstraint: {
+        delay: 200, // 200ms hold before drag begins (allows natural scrolling)
+        tolerance: 5, // 5px movement tolerance
+      },
+    }),
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 5, // 5px movement on desktop before dragging
+      },
+    }),
+  )
 
   // Current cycle details for selectedMonth
   const activeCycle: PaydayCycle = useMemo(() => {
@@ -90,7 +317,31 @@ export function SettingsPage() {
               percent: a.allocationPercent,
             }
           })
-          setItems(loadedItems)
+
+          // Ensure the 3 default categories are ALWAYS pinned at indices 0, 1, 2:
+          // 0: cat-expenses (Daily Expenses)
+          // 1: cat-fixed (Fixed Amount)
+          // 2: cat-savings (Savings)
+          const dailyItem = loadedItems.find((it) => it.id === 'cat-expenses') ?? {
+            id: 'cat-expenses',
+            name: 'Daily Expenses',
+            icon: '🛒',
+            percent: 50,
+          }
+          const fixedItem = loadedItems.find((it) => it.id === 'cat-fixed') ?? {
+            id: 'cat-fixed',
+            name: 'Fixed Amount',
+            icon: '🏠',
+            percent: 30,
+          }
+          const savingsItem = loadedItems.find((it) => it.id === 'cat-savings') ?? {
+            id: 'cat-savings',
+            name: 'Savings',
+            icon: '🏦',
+            percent: 20,
+          }
+          const customItems = loadedItems.filter((it) => !DEFAULT_CATEGORY_IDS.has(it.id))
+          setItems([dailyItem, fixedItem, savingsItem, ...customItems])
         } else {
           // Default initial state
           setIncome(10_000_000)
@@ -117,12 +368,11 @@ export function SettingsPage() {
 
   const isAllocationValid = totalAllocationPercent === 100
 
-  // Calculate daily budget preview based on Daily Expenses category
+  // Calculate daily budget preview strictly based on Daily Expenses (cat-expenses) and dynamic cycle days
   const dailyBudgetPreview = useMemo(() => {
-    const expenseItem = items.find((it) => it.id === 'cat-expenses') ?? items[0]
+    const expenseItem = items.find((it) => it.id === 'cat-expenses')
     const expensePercent = expenseItem ? Number(expenseItem.percent) || 0 : 0
-    const expenseBudget = calculateAllocationAmount(income, expensePercent)
-    return calculateDailyBudget(expenseBudget, activeCycle.totalDays)
+    return calculateDailyLimit(income, expensePercent, activeCycle.totalDays)
   }, [items, income, activeCycle.totalDays])
 
   // Preview current cycle calculated from the selected startDay
@@ -175,43 +425,34 @@ export function SettingsPage() {
     setItems((prev) => [...prev, newItem])
   }
 
-  // Remove budget category
+  // Remove budget category (Default categories: Daily Expenses, Fixed Amount, Savings cannot be deleted)
   const handleRemoveCategory = (id: string) => {
-    if (items.length <= 1) return
+    if (isDefaultCategory(id)) return
     setItems((prev) => prev.filter((it) => it.id !== id))
   }
 
-  // Reorder: Move Up / Down
+  // Reorder: Move Up / Down (Default categories 0, 1, 2 are fixed and cannot be moved or replaced)
   const handleMove = (index: number, direction: 'up' | 'down') => {
+    if (index < 3) return
     const targetIndex = direction === 'up' ? index - 1 : index + 1
-    if (targetIndex < 0 || targetIndex >= items.length) return
+    if (targetIndex < 3 || targetIndex >= items.length) return
+    setItems((prev) => arrayMove(prev, index, targetIndex))
+  }
+
+  // Dnd drag end handler (Default categories 0, 1, 2 cannot be dragged or replaced)
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event
+    if (!over || active.id === over.id) return
+    if (isDefaultCategory(String(active.id)) || isDefaultCategory(String(over.id))) return
+
     setItems((prev) => {
-      const next = [...prev]
-      const temp = next[index]
-      next[index] = next[targetIndex]
-      next[targetIndex] = temp
-      return next
+      const oldIndex = prev.findIndex((it) => it.id === active.id)
+      const newIndex = prev.findIndex((it) => it.id === over.id)
+      if (oldIndex === -1 || newIndex === -1) return prev
+      // Ensure custom item cannot be moved into default positions (0, 1, 2)
+      const safeTargetIndex = Math.max(3, newIndex)
+      return arrayMove(prev, oldIndex, safeTargetIndex)
     })
-  }
-
-  // Drag & Drop handlers
-  const handleDragStart = (index: number) => {
-    setDraggedIndex(index)
-  }
-
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault()
-  }
-
-  const handleDrop = (dropIndex: number) => {
-    if (draggedIndex === null || draggedIndex === dropIndex) return
-    setItems((prev) => {
-      const next = [...prev]
-      const [draggedItem] = next.splice(draggedIndex, 1)
-      next.splice(dropIndex, 0, draggedItem)
-      return next
-    })
-    setDraggedIndex(null)
   }
 
   // Save budget plan and update category records
@@ -231,15 +472,20 @@ export function SettingsPage() {
       for (let i = 0; i < items.length; i++) {
         const item = items[i]
         const existingCat = await categoryRepository.findById(item.id)
+        let resolvedName = item.name.trim() || t('transactions.categories', 'Danh mục')
+        if (item.id === 'cat-expenses') resolvedName = 'Daily Expenses'
+        else if (item.id === 'cat-fixed') resolvedName = 'Fixed Amount'
+        else if (item.id === 'cat-savings') resolvedName = 'Savings'
+
         if (existingCat) {
           await categoryRepository.update(item.id, {
-            name: item.name.trim() || t('transactions.categories', 'Danh mục'),
+            name: resolvedName,
             sortOrder: i + 1,
           })
         } else {
           await categoryRepository.create({
             id: item.id,
-            name: item.name.trim() || t('transactions.categories', 'Danh mục'),
+            name: resolvedName,
             icon: item.icon || '🏷️',
             sortOrder: i + 1,
             createdAt: new Date().toISOString(),
@@ -259,6 +505,9 @@ export function SettingsPage() {
         incomeVnd: Math.max(0, Math.round(income)),
         allocations: allocationList,
       })
+
+      // 3. Refresh global Daily Limit state for Dashboard & Report
+      await refreshDailyLimit()
 
       setSaveSuccess(true)
       setTimeout(() => setSaveSuccess(false), 3000)
@@ -468,7 +717,7 @@ export function SettingsPage() {
                   </div>
                 </div>
 
-                {/* Daily Spending Preview Callout */}
+                {/* Daily Spending Preview Callout (Strictly based on Daily Expenses) */}
                 <div className="rounded-2xl border border-[var(--color-income-border)] bg-[var(--color-income-soft)] p-3.5 text-xs box-border">
                   <div className="flex items-center justify-between">
                     <span className="font-bold text-[var(--color-text-primary)]">
@@ -482,12 +731,13 @@ export function SettingsPage() {
                     {t('plan.dailySubtext', {
                       percent: items.find((it) => it.id === 'cat-expenses')?.percent ?? 0,
                       amount: formatVnd(
-                        calculateAllocationAmount(
+                        calculateDailyLimit(
                           income,
                           items.find((it) => it.id === 'cat-expenses')?.percent ?? 0,
-                        ),
+                          activeCycle.totalDays,
+                        ) * activeCycle.totalDays,
                       ),
-                      defaultValue: `Dựa trên ${items.find((it) => it.id === 'cat-expenses')?.percent ?? 0}% cho Chi Tiêu (${activeCycle.totalDays} ngày)`,
+                      defaultValue: `Dựa trên ${items.find((it) => it.id === 'cat-expenses')?.percent ?? 0}% cho Chi Tiêu Hàng Ngày (${activeCycle.totalDays} ngày)`,
                     })}
                   </p>
                 </div>
@@ -556,119 +806,33 @@ export function SettingsPage() {
                     </div>
                   </div>
 
-                  {/* Budget Allocation Items List (CRUD & Drag/Drop) */}
-                  <div className="space-y-2.5 w-full max-w-full box-border">
-                    {items.map((item, index) => {
-                      const allocatedAmount = Math.round(((Number(item.percent) || 0) / 100) * income)
-
-                      return (
-                        <div
-                          key={item.id}
-                          draggable
-                          onDragStart={() => handleDragStart(index)}
-                          onDragOver={handleDragOver}
-                          onDrop={() => handleDrop(index)}
-                          className={`rounded-2xl border bg-[var(--color-bg-subtle)] p-3 space-y-2 transition-all box-border w-full max-w-full ${
-                            draggedIndex === index
-                              ? 'opacity-40 border-dashed border-[var(--color-primary)]'
-                              : 'border-[var(--color-border)] hover:border-[var(--color-border-focused)]/50'
-                          }`}
-                        >
-                          {/* Row 1: Drag handle, Icon, Editable Name, Quick reorder, Delete */}
-                          <div className="flex items-center justify-between gap-2 w-full max-w-full box-border">
-                            <div className="flex items-center gap-2 flex-1 min-w-0">
-                              {/* Drag Handle */}
-                              <div
-                                className="cursor-grab active:cursor-grabbing text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] touch-none p-1 shrink-0"
-                                title={t('plan.dragToReorder', 'Kéo thả')}
-                              >
-                                <GripVertical className="h-4 w-4" />
-                              </div>
-
-                              {/* Category Icon */}
-                              <span className="flex h-7 w-7 items-center justify-center rounded-xl bg-[var(--color-bg-surface)] text-sm shadow-2xs shrink-0 text-[var(--color-primary)]">
-                                <CategoryIconRenderer icon={item.icon} size={16} />
-                              </span>
-
-                              {/* Editable Name */}
-                              <input
-                                type="text"
-                                value={item.name}
-                                onChange={(e) => handleNameChange(item.id, e.target.value)}
-                                className="font-bold text-xs text-[var(--color-text-primary)] bg-transparent border-b border-transparent focus:border-[var(--color-border-focused)] focus:outline-none min-w-0 flex-1 truncate"
-                                placeholder={t('plan.categoryNamePlaceholder', 'Tên danh mục')}
-                              />
-                            </div>
-
-                            {/* Actions: Move Up / Down & Delete */}
-                            <div className="flex items-center gap-0.5 shrink-0">
-                              <button
-                                type="button"
-                                disabled={index === 0}
-                                onClick={() => handleMove(index, 'up')}
-                                className="p-1 text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] disabled:opacity-20 cursor-pointer disabled:cursor-not-allowed"
-                                aria-label={t('plan.moveUp', 'Lên')}
-                              >
-                                <ChevronUp className="h-3.5 w-3.5" />
-                              </button>
-                              <button
-                                type="button"
-                                disabled={index === items.length - 1}
-                                onClick={() => handleMove(index, 'down')}
-                                className="p-1 text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] disabled:opacity-20 cursor-pointer disabled:cursor-not-allowed"
-                                aria-label={t('plan.moveDown', 'Xuống')}
-                              >
-                                <ChevronDown className="h-3.5 w-3.5" />
-                              </button>
-                              <button
-                                type="button"
-                                disabled={items.length <= 1}
-                                onClick={() => handleRemoveCategory(item.id)}
-                                className="p-1 text-[var(--color-text-muted)] hover:text-[var(--color-expense)] disabled:opacity-20 cursor-pointer disabled:cursor-not-allowed ml-1"
-                                title={t('plan.deleteCategory', 'Xóa danh mục')}
-                              >
-                                <Trash2 className="h-3.5 w-3.5" />
-                              </button>
-                            </div>
-                          </div>
-
-                          {/* Row 2: Direct % Input and Auto-calculated Money */}
-                          <div className="flex items-center justify-between gap-3 pt-1 border-t border-[var(--color-border)]/60 w-full max-w-full box-border">
-                            {/* % Input */}
-                            <div className="flex items-center gap-1.5 shrink-0">
-                              <span className="text-[11px] font-semibold text-[var(--color-text-secondary)]">
-                                {t('plan.ratio', 'Tỷ lệ:')}
-                              </span>
-                              <div className="relative flex items-center">
-                                <input
-                                  type="number"
-                                  min="0"
-                                  max="100"
-                                  value={item.percent === 0 ? '' : item.percent}
-                                  onChange={(e) => handlePercentChange(item.id, e.target.value)}
-                                  placeholder="0"
-                                  className="w-14 rounded-lg border border-[var(--color-border)] bg-[var(--color-bg-surface)] px-2 py-1 text-center text-xs font-bold text-[var(--color-text-primary)] focus:outline-none focus:border-[var(--color-border-focused)]"
-                                />
-                                <span className="ml-1 text-xs font-bold text-[var(--color-text-muted)]">
-                                  %
-                                </span>
-                              </div>
-                            </div>
-
-                            {/* Auto-calculated Money Amount */}
-                            <div className="text-right min-w-0 flex-1">
-                              <span className="text-[10px] text-[var(--color-text-muted)] block truncate">
-                                {t('plan.allocatedAmount', 'Số tiền phân bổ')}
-                              </span>
-                              <span className="text-xs font-bold text-[var(--color-text-primary)] amount-display truncate block">
-                                {formatVnd(allocatedAmount)}
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-                      )
-                    })}
-                  </div>
+                  {/* Budget Allocation Items List with @dnd-kit (iOS Optimized TouchSensor) */}
+                  <DndContext
+                    sensors={sensors}
+                    collisionDetection={closestCenter}
+                    onDragEnd={handleDragEnd}
+                  >
+                    <SortableContext
+                      items={items.map((it) => it.id)}
+                      strategy={verticalListSortingStrategy}
+                    >
+                      <div className="space-y-2.5 w-full max-w-full box-border">
+                        {items.map((item, index) => (
+                          <SortableBudgetItem
+                            key={item.id}
+                            item={item}
+                            index={index}
+                            totalItems={items.length}
+                            income={income}
+                            onPercentChange={handlePercentChange}
+                            onNameChange={handleNameChange}
+                            onRemove={handleRemoveCategory}
+                            onMove={handleMove}
+                          />
+                        ))}
+                      </div>
+                    </SortableContext>
+                  </DndContext>
 
                   {/* Add Category Button */}
                   <button

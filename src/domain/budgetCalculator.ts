@@ -81,6 +81,24 @@ export function evaluateBudgetStatus(
 }
 
 /**
+ * Calculates the daily spending limit based exclusively on the Daily Expenses category allocation
+ * and the dynamic number of days in the billing cycle (from PayDay to PayDay).
+ *
+ * Formula:
+ * Daily Expenses Amount = (Monthly Income * Daily Expenses Percent) / 100
+ * Daily Limit = Math.round(Daily Expenses Amount / totalDaysInCycle)
+ */
+export function calculateDailyLimit(
+  incomeVnd: number,
+  dailyExpensesPercent: number,
+  totalDaysInCycle: number,
+): number {
+  if (incomeVnd <= 0 || dailyExpensesPercent <= 0 || totalDaysInCycle <= 0) return 0
+  const dailyExpensesAmount = (incomeVnd * dailyExpensesPercent) / 100
+  return Math.round(dailyExpensesAmount / totalDaysInCycle)
+}
+
+/**
  * Builds a full monthly budget summary from a plan, its expense allocations,
  * and the total spent so far in the month.
  */

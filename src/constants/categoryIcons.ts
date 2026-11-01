@@ -3,6 +3,7 @@
  * Standard curated financial category icons mapped to Lucide React and emoji counterparts.
  * Organized into 6 distinct spending and financial groups.
  */
+import * as LucideIcons from 'lucide-react'
 import {
   // Food & Living
   Utensils,
@@ -413,3 +414,29 @@ export const ICON_MAP: Record<string, LucideIcon> = ALL_CATEGORY_ICONS.reduce(
   },
   {} as Record<string, LucideIcon>,
 )
+
+/**
+ * Resolves an icon string (Lucide component name or id) to a LucideIcon component.
+ */
+export function resolveIconComponent(iconStr?: string): LucideIcon | null {
+  if (!iconStr) return null
+
+  // 1. Curated ICON_MAP match
+  if (ICON_MAP[iconStr]) return ICON_MAP[iconStr]
+
+  // 2. Direct Lucide icon name match (e.g. "Utensils", "ShoppingCart")
+  const lucideRecord = LucideIcons as unknown as Record<string, unknown>
+  const direct = lucideRecord[iconStr]
+  if (typeof direct === 'function') {
+    return direct as LucideIcon
+  }
+
+  // 3. Capitalized match (e.g. "utensils" -> "Utensils")
+  const capitalized = iconStr.charAt(0).toUpperCase() + iconStr.slice(1)
+  const capDirect = lucideRecord[capitalized]
+  if (typeof capDirect === 'function') {
+    return capDirect as LucideIcon
+  }
+
+  return null
+}

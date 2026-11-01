@@ -7,7 +7,10 @@ import { monthlyPlanRepository } from '@/repositories/monthlyPlanRepository'
 import { allocationRepository } from '@/repositories/allocationRepository'
 import { categoryRepository } from '@/repositories/categoryRepository'
 import { validateAllocationsSum } from '@/domain/validation'
-import type { MonthlyPlan, MonthlyAllocation, MonthId, BudgetCategory } from '@/types/models'
+import { calculateDailyLimit } from '@/domain/budgetCalculator'
+import { getCycleMonthForDate, getPaydayCycle } from '@/features/reports/paydayCycle'
+import { getTodayString } from '@/services/dateService'
+import type { MonthlyPlan, MonthlyAllocation, MonthId, BudgetCategory, DateString } from '@/types/models'
 
 export interface CreatePlanInput {
   month: MonthId
@@ -123,3 +126,27 @@ export async function saveMonthlyPlan(input: CreatePlanInput): Promise<MonthlyPl
 
   return createMonthlyPlan(input)
 }
+
+/**
+ * Calculates the active Daily Limit (Hạn mức chi tiêu mỗi ngày) for the current cycle,
+ * strictly based on the user's Daily Expenses (cat-expenses) allocation and dynamic cycle days.
+ */
+export async function getActiveDailyLimit(
+  payDay: number = 1,
+  dateStr?: DateString,
+): Promise<number> {
+  const activeDate = dateStr ?? getTodayString()
+  const cycleMonth = getCycleMonthForDate(activeDate, payDay)
+  const cycle = getPaydayCycle(cycleMonth, payDay)
+
+  const plan = await monthlyPlanRepository.findByMonth(cycleMonth)
+  if (!plan || plan.incomeVnd <= 0) return 0
+
+  const allocations = await allocationRepository.findByPlanId(plan.id)
+  const dailyExpensesAlloc = allocations.find((a) => a.categoryId === 'cat-expenses')
+  const percent = dailyExpensesAlloc ? dailyExpensesAlloc.allocationPercent : 0
+  if (percent <= 0) return 0
+
+  return calculateDailyLimit(plan.incomeVnd, percent, cycle.totalDays)
+}
+

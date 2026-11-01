@@ -70,6 +70,7 @@
     "savingBtn": "Saving Plan…",
     "errorSum": "Total allocation must equal 100%. Currently: {{current}}%",
     "cat_expenses": "Daily Expenses",
+    "cat_fixed": "Fixed Amount",
     "cat_savings": "Savings",
     "cat_investment": "Investment",
     "cat_emergency": "Emergency Fund",
@@ -84,7 +85,10 @@
     "moveDown": "Move down",
     "ratio": "Rate:",
     "newCategoryDefaultName": "New Category {{index}}",
-    "saveError": "Error saving budget plan."
+    "saveError": "Error saving budget plan.",
+    "defaultCategory": "Default",
+    "defaultLocked": "Fixed default category",
+    "dailyExpensesNotice": "Default category used to calculate daily limit"
   },
   "transactions": {
     "title": "Daily Expenses",

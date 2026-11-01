@@ -4,6 +4,7 @@ import {
   parseMonthId,
   calculateAllocationAmount,
   calculateDailyBudget,
+  calculateDailyLimit,
   calculateTotalBudget,
   evaluateBudgetStatus,
   buildMonthlyBudgetSummary,
@@ -126,6 +127,26 @@ describe('buildMonthlyBudgetSummary', () => {
     expect(result.totalSpentVnd).toBe(3_000_000)
     expect(result.remainingVnd).toBe(7_000_000)
     expect(result.isOverBudget).toBe(false)
+  })
+})
+
+describe('calculateDailyLimit', () => {
+  it('calculates daily limit for 10M income with 70% daily expenses in 30 days cycle', () => {
+    // Daily expenses = (10,000,000 * 70) / 100 = 7,000,000
+    // Daily limit = 7,000,000 / 30 = 233,333
+    expect(calculateDailyLimit(10_000_000, 70, 30)).toBe(233_333)
+  })
+
+  it('calculates daily limit for 10M income with 70% daily expenses in 31 days cycle', () => {
+    // Daily expenses = (10,000,000 * 70) / 100 = 7,000,000
+    // Daily limit = 7,000,000 / 31 = 225,806
+    expect(calculateDailyLimit(10_000_000, 70, 31)).toBe(225_806)
+  })
+
+  it('returns 0 if income, percent, or total days is zero or negative', () => {
+    expect(calculateDailyLimit(0, 70, 30)).toBe(0)
+    expect(calculateDailyLimit(10_000_000, 0, 30)).toBe(0)
+    expect(calculateDailyLimit(10_000_000, 70, 0)).toBe(0)
   })
 })
 

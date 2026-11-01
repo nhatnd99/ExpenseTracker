@@ -70,6 +70,7 @@
     "savingBtn": "Đang Lưu…",
     "errorSum": "Tổng tỷ lệ phân bổ phải bằng 100%. Hiện tại: {{current}}%",
     "cat_expenses": "Chi Tiêu Hàng Ngày",
+    "cat_fixed": "Chi Phí Cố Định",
     "cat_savings": "Tiết Kiệm",
     "cat_investment": "Đầu Tư",
     "cat_emergency": "Quỹ Khẩn Cấp",
@@ -84,7 +85,10 @@
     "moveDown": "Xuống",
     "ratio": "Tỷ lệ:",
     "newCategoryDefaultName": "Danh mục mới {{index}}",
-    "saveError": "Lỗi khi lưu kế hoạch ngân sách."
+    "saveError": "Lỗi khi lưu kế hoạch ngân sách.",
+    "defaultCategory": "Mặc định",
+    "defaultLocked": "Hạng mục mặc định cố định",
+    "dailyExpensesNotice": "Hạng mục mặc định tính hạn mức chi tiêu ngày"
   },
   "transactions": {
     "title": "Ghi Chép Chi Tiêu",

@@ -19,6 +19,7 @@ import { getDashboardData, type DashboardData } from './dashboardService'
 import { formatVnd, getTodayString } from '@/services/dateService'
 import { getCycleMonthForDate } from '@/features/reports/paydayCycle'
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner'
+import { CategoryIconRenderer } from '@/components/ui/CategoryIconRenderer'
 
 export function DashboardPage() {
   const { t } = useTranslation()
@@ -267,13 +268,15 @@ export function DashboardPage() {
             <div className="divide-y divide-[var(--color-border)]">
               {recentTransactions.map((tx) => (
                 <div key={tx.id} className="flex items-center justify-between py-2.5">
-                  <div className="flex items-center gap-2.5">
-                    <span className="text-base">{tx.categoryIcon}</span>
-                    <div>
-                      <p className="text-xs font-bold text-[var(--color-text-primary)]">
+                  <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[var(--color-bg-subtle)] text-[var(--color-primary)] border border-[var(--color-border)] shadow-2xs">
+                      <CategoryIconRenderer icon={tx.categoryIcon} size={18} />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs font-bold text-[var(--color-text-primary)] truncate">
                         {tx.categoryName}
                       </p>
-                      <p className="text-[11px] text-[var(--color-text-muted)]">
+                      <p className="text-[11px] text-[var(--color-text-muted)] truncate">
                         {tx.date} {tx.description && `• ${tx.description}`}
                       </p>
                     </div>

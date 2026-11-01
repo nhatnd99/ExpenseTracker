@@ -6,7 +6,6 @@ import {
   ChevronRight,
   Calendar as CalendarIcon,
   Receipt,
-  Edit3,
   Wallet,
   AlertTriangle,
   CheckCircle2,
@@ -24,10 +23,13 @@ import {
 } from './transactionService'
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner'
 import type { BudgetCategory } from '@/types/models'
+import { useSettings } from '@/context/useSettings'
 import { CreateExpenseModal } from './components/CreateExpenseModal'
+import { ExpenseItem } from './components/ExpenseItem'
 
 export function TransactionsPage() {
   const { t, i18n } = useTranslation()
+  const { payDay } = useSettings()
   const today = useMemo(() => getTodayString(), [])
 
   // Daily view focus: default state is Today
@@ -46,14 +48,14 @@ export function TransactionsPage() {
     try {
       const [txs, budget] = await Promise.all([
         getTransactionsForDate(date),
-        getDailyBudgetForDate(date),
+        getDailyBudgetForDate(date, payDay),
       ])
       setTransactions(txs)
       setDailyBudget(budget)
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [payDay])
 
   const reloadCategories = useCallback(async () => {
     const cats = await getCategories()
@@ -67,7 +69,7 @@ export function TransactionsPage() {
       const [cats, txs, budget] = await Promise.all([
         getCategories(),
         getTransactionsForDate(selectedDate),
-        getDailyBudgetForDate(selectedDate),
+        getDailyBudgetForDate(selectedDate, payDay),
       ])
       if (active) {
         setCategories(cats)
@@ -82,7 +84,7 @@ export function TransactionsPage() {
     return () => {
       active = false
     }
-  }, [selectedDate])
+  }, [selectedDate, payDay])
 
   // 1. Total spent on this selected date
   const totalSpent = useMemo(() => {
@@ -148,7 +150,7 @@ export function TransactionsPage() {
         description: data.description,
       })
     }
-    // Refresh for the currently selected date
+    // Refresh for the currently selected <date></date>
     await reloadData(selectedDate)
   }
 
@@ -404,41 +406,11 @@ export function TransactionsPage() {
             </div>
 
             {transactions.map((tx) => (
-              <div
+              <ExpenseItem
                 key={tx.id}
-                onClick={() => setActiveTransaction(tx)}
-                className="flex items-center justify-between rounded-3xl border border-[var(--color-border)] bg-[var(--color-bg-surface)] p-4 shadow-2xs transition-all hover:border-[var(--color-primary)] active:scale-[0.99] cursor-pointer"
-                role="button"
-                tabIndex={0}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' || e.key === ' ') {
-                    setActiveTransaction(tx)
-                  }
-                }}
-              >
-                <div className="flex items-center gap-3 min-w-0">
-                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[var(--color-bg-subtle)] text-xl shadow-2xs">
-                    {tx.categoryIcon}
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-sm font-bold text-[var(--color-text-primary)] truncate">
-                      {tx.categoryName}
-                    </p>
-                    <p className="text-xs text-[var(--color-text-muted)] truncate">
-                      {tx.description ? tx.description : t('transactions.dateLabel', 'Ngày') + `: ${tx.date}`}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-2.5 shrink-0 pl-2">
-                  <span className="text-sm font-bold text-[var(--color-expense)] amount-display">
-                    -{formatVnd(tx.amountVnd)}
-                  </span>
-                  <div className="flex h-7 w-7 items-center justify-center rounded-lg text-[var(--color-text-muted)] hover:text-[var(--color-primary)]">
-                    <Edit3 className="h-3.5 w-3.5" />
-                  </div>
-                </div>
-              </div>
+                expense={tx}
+                onClick={setActiveTransaction}
+              />
             ))}
           </div>
         )}

@@ -23,6 +23,7 @@ import {
   type EnrichedTransaction,
 } from '@/features/transactions/transactionService'
 import { CreateExpenseModal } from '@/features/transactions/components/CreateExpenseModal'
+import { CategoryIconRenderer } from '@/components/ui/CategoryIconRenderer'
 import type { BudgetCategory, DateString } from '@/types/models'
 import { getCycleReportData, type CycleReportData } from './reportService'
 import {
@@ -568,9 +569,9 @@ export function ReportsPage() {
                       }}
                     >
                       <div className="flex items-center gap-3 min-w-0">
-                        <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-[var(--color-bg-subtle)] text-lg shrink-0">
-                          {tx.categoryIcon}
-                        </span>
+                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[var(--color-bg-subtle)] text-[var(--color-primary)] border border-[var(--color-border)] shadow-2xs">
+                          <CategoryIconRenderer icon={tx.categoryIcon} size={18} />
+                        </div>
                         <div className="min-w-0">
                           <p className="text-xs font-bold text-[var(--color-text-primary)] truncate">
                             {tx.categoryName}

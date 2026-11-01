@@ -1,5 +1,6 @@
-import { useState, type ReactNode } from 'react'
+import { useState, useCallback, useEffect, type ReactNode } from 'react'
 import { SettingsContext } from './settings-context'
+import { getActiveDailyLimit } from '@/features/monthly-plans/monthlyPlanService'
 
 const PAYDAY_STORAGE_KEY = 'expense_tracker_payday'
 
@@ -18,6 +19,33 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     return 1
   })
 
+  const [dailyLimit, setDailyLimit] = useState<number>(0)
+
+  const refreshDailyLimit = useCallback(async (): Promise<number> => {
+    try {
+      const limit = await getActiveDailyLimit(payDay)
+      setDailyLimit(limit)
+      return limit
+    } catch {
+      return 0
+    }
+  }, [payDay])
+
+  useEffect(() => {
+    let active = true
+    getActiveDailyLimit(payDay)
+      .then((limit) => {
+        if (active) setDailyLimit(limit)
+      })
+      .catch(() => {
+        if (active) setDailyLimit(0)
+      })
+
+    return () => {
+      active = false
+    }
+  }, [payDay])
+
   const setPayDay = (newDay: number) => {
     const safeDay = Math.min(28, Math.max(1, Math.floor(newDay)))
     setPayDayState(safeDay)
@@ -29,9 +57,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <SettingsContext.Provider value={{ payDay, setPayDay }}>
+    <SettingsContext.Provider value={{ payDay, setPayDay, dailyLimit, refreshDailyLimit }}>
       {children}
     </SettingsContext.Provider>
   )
 }
-
