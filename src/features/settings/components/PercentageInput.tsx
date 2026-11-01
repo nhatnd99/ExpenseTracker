@@ -1,4 +1,5 @@
 import React from 'react'
+import { useTranslation } from 'react-i18next'
 import { Plus, Minus } from 'lucide-react'
 
 export interface PercentageInputProps {
@@ -20,8 +21,10 @@ export const PercentageInput: React.FC<PercentageInputProps> = ({
   min = 0,
   max = 100,
   className = '',
-  ariaLabel = 'Tỷ lệ phần trăm',
+  ariaLabel,
 }) => {
+  const { t } = useTranslation()
+  const effectiveAriaLabel = ariaLabel || t('settings.percentageInputLabel', 'Tỷ lệ phần trăm')
   const handleDecrement = (e: React.MouseEvent) => {
     e.preventDefault()
     e.stopPropagation()
@@ -71,7 +74,7 @@ export const PercentageInput: React.FC<PercentageInputProps> = ({
         type="button"
         disabled={disabled || value <= min}
         onClick={handleDecrement}
-        aria-label="Giảm 1%"
+        aria-label={t('settings.decreasePercent', 'Giảm 1%')}
         className="flex h-7 w-7 items-center justify-center rounded-lg text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-subtle)] hover:text-[var(--color-text-primary)] active:scale-95 disabled:opacity-20 disabled:cursor-not-allowed cursor-pointer transition-all shrink-0"
       >
         <Minus className="h-3.5 w-3.5" />
@@ -87,7 +90,7 @@ export const PercentageInput: React.FC<PercentageInputProps> = ({
           onChange={handleInputChange}
           placeholder="0"
           disabled={disabled}
-          aria-label={ariaLabel}
+          aria-label={effectiveAriaLabel}
           className="w-8 text-center text-xs font-bold text-[var(--color-text-primary)] bg-transparent border-none p-0 focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
         />
         <span className="text-xs font-bold text-[var(--color-text-muted)] select-none ml-0.5">
@@ -100,7 +103,7 @@ export const PercentageInput: React.FC<PercentageInputProps> = ({
         type="button"
         disabled={disabled || value >= max}
         onClick={handleIncrement}
-        aria-label="Tăng 1%"
+        aria-label={t('settings.increasePercent', 'Tăng 1%')}
         className="flex h-7 w-7 items-center justify-center rounded-lg text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-subtle)] hover:text-[var(--color-text-primary)] active:scale-95 disabled:opacity-20 disabled:cursor-not-allowed cursor-pointer transition-all shrink-0"
       >
         <Plus className="h-3.5 w-3.5" />

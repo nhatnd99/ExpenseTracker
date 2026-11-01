@@ -7,6 +7,14 @@ import { allocationRepository } from '@/repositories/allocationRepository'
 import { transactionRepository } from '@/repositories/transactionRepository'
 import { categoryRepository } from '@/repositories/categoryRepository'
 import { calculateTotalBudget } from '@/domain/budgetCalculator'
+import {
+  calculateDynamicBudget,
+  calculatePassedDays,
+  calculateSpentToDate,
+  calculateExtraIncome,
+} from '@/domain/dynamicBudgetCalculator'
+import { parseDateString } from '@/services/dateService'
+import { isBefore, isSameDay, isAfter } from 'date-fns'
 import { getPaydayCycle, computeCycleProgress, type PaydayCycle, type CycleBudgetProgress } from './paydayCycle'
 import type { MonthId, DateString } from '@/types/models'
 import type { EnrichedTransaction } from '@/features/transactions/transactionService'
@@ -35,6 +43,8 @@ export interface CycleReportData {
   dailySpentMap: Record<DateString, number>
   categoryBreakdown: CategorySpending[]
   transactions: EnrichedTransaction[]
+  baseDailyLimit: number
+  safeToSpend: number
 }
 
 export async function getCycleReportData(
@@ -84,19 +94,51 @@ export async function getCycleReportData(
     dailySpentMap[date] = 0
   }
   for (const tx of transactions) {
-    if (!tx.isExcludedFromDaily) {
+    if (tx.type !== 'income' && !tx.isExcludedFromDaily) {
       dailySpentMap[tx.date] = (dailySpentMap[tx.date] || 0) + tx.amountVnd
     }
   }
 
-  // Compute daily items
+  // Dynamic Safe-to-Spend calculations
   const nowStr = todayStr || new Date().toISOString().slice(0, 10)
+  const todayDateObj = parseDateString(nowStr)
+  const baseDailyLimit = cycle.totalDays > 0 ? Math.round(budgetVnd / cycle.totalDays) : 0
+
+  const passedDays = calculatePassedDays(cycle, nowStr)
+  const spentToDate = calculateSpentToDate(transactions, cycle.startDate, nowStr)
+  const totalExtraIncome = calculateExtraIncome(transactions, cycle.startDate, nowStr)
+  const dynamicResult = calculateDynamicBudget({
+    totalDays: cycle.totalDays,
+    passedDays,
+    baseBudget: budgetVnd,
+    spentToDate,
+    totalExtraIncome,
+  })
+  const safeToSpend = dynamicResult.todayLimit
+
+  // Compute daily items according to 3-state time logic (past, today, future)
   const dailyItems: DayReportItem[] = cycle.days.map((date) => {
     const dayNumber = parseInt(date.slice(8), 10)
+    const cellDateObj = parseDateString(date)
+
+    // 1. Group spent strictly excluding fixed bills (isExcludedFromDaily)
     const spentVnd = dailySpentMap[date] || 0
-    const balanceVnd = progress.dailyBudgetVnd - spentVnd
-    const isToday = date === nowStr
-    const isFuture = date > nowStr
+
+    const isPast = isBefore(cellDateObj, todayDateObj)
+    const isToday = isSameDay(cellDateObj, todayDateObj)
+    const isFuture = isAfter(cellDateObj, todayDateObj)
+
+    let balanceVnd: number
+    if (isPast) {
+      // 2. Render Các ngày trong Quá khứ: Balance = baseDailyLimit - spentOnThisDay
+      balanceVnd = baseDailyLimit - spentVnd
+    } else if (isToday) {
+      // 3. Render Ngày Hôm Nay: Balance = safeToSpend - spentOnThisDay
+      balanceVnd = safeToSpend - spentVnd
+    } else {
+      // 4. Render Các ngày Tương lai: Balance = safeToSpend (Projection)
+      balanceVnd = safeToSpend
+    }
 
     return {
       date,
@@ -108,10 +150,12 @@ export async function getCycleReportData(
     }
   })
 
-  // Category breakdown for this cycle
+  // Category breakdown for this cycle (strictly expenses)
   const catMap = new Map<string, number>()
   for (const tx of transactions) {
-    catMap.set(tx.categoryId, (catMap.get(tx.categoryId) || 0) + tx.amountVnd)
+    if (tx.type !== 'income') {
+      catMap.set(tx.categoryId, (catMap.get(tx.categoryId) || 0) + tx.amountVnd)
+    }
   }
 
   const categoryBreakdown: CategorySpending[] = Array.from(catMap.entries())
@@ -134,6 +178,8 @@ export async function getCycleReportData(
     dailySpentMap,
     categoryBreakdown,
     transactions,
+    baseDailyLimit,
+    safeToSpend,
   }
 }
 

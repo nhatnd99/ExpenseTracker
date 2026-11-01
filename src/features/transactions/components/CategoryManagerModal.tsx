@@ -11,6 +11,7 @@ interface CategoryManagerModalProps {
   onClose: () => void
   categories: BudgetCategory[]
   onCategoriesChanged: () => void
+  initialType?: 'expense' | 'income'
 }
 
 export const CategoryManagerModal: React.FC<CategoryManagerModalProps> = ({
@@ -18,8 +19,10 @@ export const CategoryManagerModal: React.FC<CategoryManagerModalProps> = ({
   onClose,
   categories,
   onCategoriesChanged,
+  initialType = 'expense',
 }) => {
   const { t } = useTranslation()
+  const [activeTab, setActiveTab] = useState<'expense' | 'income'>(initialType)
   const [newName, setNewName] = useState('')
   const [selectedIcon, setSelectedIcon] = useState('Utensils')
   const [selectedGroup, setSelectedGroup] = useState<string>('food')
@@ -27,7 +30,18 @@ export const CategoryManagerModal: React.FC<CategoryManagerModalProps> = ({
   const [submitting, setSubmitting] = useState(false)
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
 
+  const [prevInitialType, setPrevInitialType] = useState(initialType)
+  if (initialType !== prevInitialType) {
+    setPrevInitialType(initialType)
+    setActiveTab(initialType)
+  }
+
   if (!isOpen) return null
+
+  // Filter categories matching current active tab
+  const filteredCategories = categories.filter((c) =>
+    activeTab === 'income' ? c.type === 'income' : c.type !== 'income'
+  )
 
   const handleAdd = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -42,7 +56,8 @@ export const CategoryManagerModal: React.FC<CategoryManagerModalProps> = ({
       await addCategory({
         name: newName.trim(),
         icon: selectedIcon,
-        isFixedBill,
+        isFixedBill: activeTab === 'income' ? false : isFixedBill,
+        type: activeTab,
       })
       setNewName('')
       setIsFixedBill(false)
@@ -84,11 +99,18 @@ export const CategoryManagerModal: React.FC<CategoryManagerModalProps> = ({
 
   const handleMove = async (index: number, direction: 'up' | 'down') => {
     const targetIndex = direction === 'up' ? index - 1 : index + 1
-    if (targetIndex < 0 || targetIndex >= categories.length) return
+    if (targetIndex < 0 || targetIndex >= filteredCategories.length) return
+
+    const itemA = filteredCategories[index]
+    const itemB = filteredCategories[targetIndex]
+    const fullIndexA = categories.findIndex((c) => c.id === itemA.id)
+    const fullIndexB = categories.findIndex((c) => c.id === itemB.id)
+    if (fullIndexA === -1 || fullIndexB === -1) return
 
     const reordered = [...categories]
-    const [moved] = reordered.splice(index, 1)
-    reordered.splice(targetIndex, 0, moved)
+    const temp = reordered[fullIndexA]
+    reordered[fullIndexA] = reordered[fullIndexB]
+    reordered[fullIndexB] = temp
 
     await reorderCategories(reordered)
     onCategoriesChanged()
@@ -100,7 +122,7 @@ export const CategoryManagerModal: React.FC<CategoryManagerModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-xs p-0 sm:p-4 overflow-hidden">
-      <div className="w-full sm:w-[92vw] sm:max-w-md max-w-full rounded-t-3xl sm:rounded-3xl border border-[var(--color-border)] bg-[var(--color-bg-surface)] p-4 sm:p-5 pb-[calc(env(safe-area-inset-bottom,0px)+1rem)] sm:pb-5 shadow-2xl max-h-[88dvh] flex flex-col overflow-hidden box-border mx-auto">
+      <div className="w-full sm:w-[92vw] sm:max-w-md max-w-full rounded-t-3xl sm:rounded-3xl border border-[var(--color-border)] bg-[var(--color-bg-surface)] p-4 sm:p-5 pb-[max(0.75rem,env(safe-area-inset-bottom,0px))] sm:pb-5 shadow-2xl max-h-[88dvh] flex flex-col overflow-hidden box-border mx-auto">
         {/* Header - Fixed */}
         <div className="shrink-0 flex items-center justify-between border-b border-[var(--color-border)] pb-3">
           <h2 className="text-base font-bold text-[var(--color-text-primary)]">
@@ -118,13 +140,43 @@ export const CategoryManagerModal: React.FC<CategoryManagerModalProps> = ({
 
         {/* Content scroll area - Vertical Scroll Only, strict max-w-full and overflow-x-hidden */}
         <div className="flex-1 overflow-y-auto overflow-x-hidden w-full max-w-full py-3 space-y-4 overscroll-y-contain box-border">
+          {/* Category Group Tabs: Chi (Expense) / Thu (Income) */}
+          <div className="grid grid-cols-2 p-1 rounded-2xl bg-[var(--color-bg-subtle)] border border-[var(--color-border)] gap-1">
+            <button
+              type="button"
+              onClick={() => setActiveTab('expense')}
+              className={`py-2 text-xs font-bold rounded-xl transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                activeTab === 'expense'
+                  ? 'bg-[var(--color-bg-surface)] text-[var(--color-expense)] shadow-2xs border border-[var(--color-border)]'
+                  : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]'
+              }`}
+            >
+              <span className="w-2 h-2 rounded-full bg-[var(--color-expense)]" />
+              <span>{t('transactions.typeExpense', 'Chi tiêu')}</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab('income')}
+              className={`py-2 text-xs font-bold rounded-xl transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                activeTab === 'income'
+                  ? 'bg-[var(--color-bg-surface)] text-[var(--color-income)] shadow-2xs border border-[var(--color-border)]'
+                  : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]'
+              }`}
+            >
+              <span className="w-2 h-2 rounded-full bg-[var(--color-income)]" />
+              <span>{t('transactions.typeIncome', 'Thu nhập')}</span>
+            </button>
+          </div>
+
           {/* Add Category Form */}
           <form
             onSubmit={handleAdd}
             className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg-subtle)] p-3 space-y-3 w-full max-w-full box-border overflow-hidden"
           >
             <span className="text-xs font-bold text-[var(--color-text-secondary)] uppercase tracking-wider block">
-              {t('transactions.newCategoryName', 'Thêm danh mục mới')}
+              {activeTab === 'income'
+                ? t('transactions.newIncomeCategoryName', 'Thêm danh mục thu nhập mới')
+                : t('transactions.newCategoryName', 'Thêm danh mục chi tiêu mới')}
             </span>
 
             {/* Input row */}
@@ -134,12 +186,16 @@ export const CategoryManagerModal: React.FC<CategoryManagerModalProps> = ({
                 <CategoryIconRenderer icon={selectedIcon} size={20} />
               </div>
 
-              {/* Category Name Input (with min-w-0 flex-1 to prevent right edge overflow) */}
+              {/* Category Name Input */}
               <input
                 type="text"
                 value={newName}
                 onChange={(e) => setNewName(e.target.value)}
-                placeholder={t('transactions.categoryNamePlaceholder', 'Ví dụ: Cà phê, Xăng xe…')}
+                placeholder={
+                  activeTab === 'income'
+                    ? t('transactions.incomeCategoryPlaceholder', 'Ví dụ: Lương, Thưởng, Bán đồ…')
+                    : t('transactions.categoryNamePlaceholder', 'Ví dụ: Cà phê, Xăng xe…')
+                }
                 className="min-w-0 flex-1 rounded-xl border border-[var(--color-border)] bg-[var(--color-bg-surface)] px-3 py-2 text-base sm:text-sm text-[var(--color-text-primary)] placeholder-[var(--color-text-muted)] focus:outline-none focus:border-[var(--color-border-focused)] box-border"
               />
 
@@ -147,7 +203,11 @@ export const CategoryManagerModal: React.FC<CategoryManagerModalProps> = ({
               <button
                 type="submit"
                 disabled={submitting || !newName.trim()}
-                className="shrink-0 flex h-10 items-center justify-center gap-1 rounded-xl bg-[var(--color-primary)] px-3 text-xs font-bold text-white disabled:opacity-40 cursor-pointer transition-all active:scale-95"
+                className={`shrink-0 flex h-10 items-center justify-center gap-1 rounded-xl px-3 text-xs font-bold text-white disabled:opacity-40 cursor-pointer transition-all active:scale-95 ${
+                  activeTab === 'income'
+                    ? 'bg-emerald-600 hover:bg-emerald-700'
+                    : 'bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)]'
+                }`}
               >
                 <Plus className="h-4 w-4" />
                 <span>{t('transactions.addCategoryBtn', 'Thêm')}</span>
@@ -172,7 +232,7 @@ export const CategoryManagerModal: React.FC<CategoryManagerModalProps> = ({
               ))}
             </div>
 
-            {/* Standard Icon Grid (Fixed height, guaranteed no layout shift) */}
+            {/* Standard Icon Grid */}
             <div className="h-24 overflow-y-auto overflow-x-hidden rounded-xl border border-[var(--color-border)] bg-[var(--color-bg-surface)] p-2 w-full max-w-full box-border">
               <div className="grid grid-cols-6 gap-1.5 w-full">
                 {currentGroupIcons.map((item) => {
@@ -196,23 +256,25 @@ export const CategoryManagerModal: React.FC<CategoryManagerModalProps> = ({
               </div>
             </div>
 
-            {/* Checkbox: Là hóa đơn/chi phí lớn (Không trừ vào Hạn mức ăn tiêu hằng ngày) */}
-            <label className="flex items-start gap-2.5 p-2.5 rounded-xl bg-[var(--color-bg-surface)] border border-[var(--color-border)] cursor-pointer select-none hover:border-[var(--color-primary)]/50 transition-colors">
-              <input
-                type="checkbox"
-                checked={isFixedBill}
-                onChange={(e) => setIsFixedBill(e.target.checked)}
-                className="mt-0.5 h-4 w-4 rounded border-[var(--color-border)] text-[var(--color-primary)] focus:ring-[var(--color-primary)] cursor-pointer accent-[var(--color-primary)] shrink-0"
-              />
-              <div className="min-w-0 flex-1">
-                <span className="text-xs font-bold text-[var(--color-text-primary)] block">
-                  {t('transactions.isFixedBillLabel', 'Là hóa đơn / chi phí lớn')}
-                </span>
-                <span className="text-[11px] text-[var(--color-text-muted)] block leading-tight">
-                  {t('transactions.isFixedBillHelp', 'Không trừ vào Hạn mức ăn tiêu hằng ngày')}
-                </span>
-              </div>
-            </label>
+            {/* Checkbox: Là hóa đơn/chi phí lớn (Chỉ hiển thị cho tab Chi tiêu) */}
+            {activeTab === 'expense' && (
+              <label className="flex items-start gap-2.5 p-2.5 rounded-xl bg-[var(--color-bg-surface)] border border-[var(--color-border)] cursor-pointer select-none hover:border-[var(--color-primary)]/50 transition-colors">
+                <input
+                  type="checkbox"
+                  checked={isFixedBill}
+                  onChange={(e) => setIsFixedBill(e.target.checked)}
+                  className="mt-0.5 h-4 w-4 rounded border-[var(--color-border)] text-[var(--color-primary)] focus:ring-[var(--color-primary)] cursor-pointer accent-[var(--color-primary)] shrink-0"
+                />
+                <div className="min-w-0 flex-1">
+                  <span className="text-xs font-bold text-[var(--color-text-primary)] block">
+                    {t('transactions.isFixedBillLabel', 'Là hóa đơn / chi phí lớn')}
+                  </span>
+                  <span className="text-[11px] text-[var(--color-text-muted)] block leading-tight">
+                    {t('transactions.isFixedBillHelp', 'Không trừ vào Hạn mức ăn tiêu hằng ngày')}
+                  </span>
+                </div>
+              </label>
+            )}
 
             {errorMsg && (
               <p className="text-xs text-[var(--color-expense)] font-medium">⚠️ {errorMsg}</p>
@@ -222,16 +284,16 @@ export const CategoryManagerModal: React.FC<CategoryManagerModalProps> = ({
           {/* List of categories with reorder & delete */}
           <div className="space-y-2 w-full max-w-full box-border">
             <span className="text-xs font-bold text-[var(--color-text-secondary)] uppercase tracking-wider px-1 block">
-              {t('transactions.categoryOrder', 'Thứ tự hiển thị')} ({categories.length})
+              {t('transactions.categoryOrder', 'Thứ tự hiển thị')} ({filteredCategories.length})
             </span>
 
-            {categories.length === 0 ? (
+            {filteredCategories.length === 0 ? (
               <p className="text-xs text-[var(--color-text-muted)]">
                 {t('transactions.categoryEmpty', 'Chưa có danh mục nào.')}
               </p>
             ) : (
               <div className="divide-y divide-[var(--color-border)] rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg-surface)] overflow-hidden w-full max-w-full box-border">
-                {categories.map((cat, idx) => (
+                {filteredCategories.map((cat, idx) => (
                   <div
                     key={cat.id}
                     className="flex items-center justify-between p-2.5 sm:p-3 gap-2 w-full max-w-full box-border hover:bg-[var(--color-bg-subtle)] transition-colors"
@@ -245,22 +307,24 @@ export const CategoryManagerModal: React.FC<CategoryManagerModalProps> = ({
                           <span className="text-sm font-semibold text-[var(--color-text-primary)] truncate">
                             {cat.name}
                           </span>
-                          {cat.isFixedBill && (
+                          {activeTab === 'expense' && cat.isFixedBill && (
                             <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-[var(--color-primary-soft)] text-[var(--color-primary)] border border-[var(--color-primary)]/20 shrink-0 inline-flex items-center gap-0.5">
                               <Receipt className="h-3 w-3" />
                               <span>{t('transactions.fixedBillBadge', 'Hóa đơn')}</span>
                             </span>
                           )}
                         </div>
-                        <button
-                          type="button"
-                          onClick={() => void handleToggleFixedBill(cat.id, cat.isFixedBill)}
-                          className="text-[10px] text-[var(--color-text-muted)] hover:text-[var(--color-primary)] hover:underline block text-left mt-0.5 cursor-pointer"
-                        >
-                          {cat.isFixedBill
-                            ? t('transactions.markAsDaily', 'Đổi sang chi tiêu ngày')
-                            : t('transactions.markAsFixedBill', 'Đổi sang hóa đơn lớn')}
-                        </button>
+                        {activeTab === 'expense' && (
+                          <button
+                            type="button"
+                            onClick={() => void handleToggleFixedBill(cat.id, cat.isFixedBill)}
+                            className="text-[10px] text-[var(--color-text-muted)] hover:text-[var(--color-primary)] hover:underline block text-left mt-0.5 cursor-pointer"
+                          >
+                            {cat.isFixedBill
+                              ? t('transactions.markAsDaily', 'Đổi sang chi tiêu ngày')
+                              : t('transactions.markAsFixedBill', 'Đổi sang hóa đơn lớn')}
+                          </button>
+                        )}
                       </div>
                     </div>
 
@@ -278,7 +342,7 @@ export const CategoryManagerModal: React.FC<CategoryManagerModalProps> = ({
                       {/* Move down */}
                       <button
                         type="button"
-                        disabled={idx === categories.length - 1}
+                        disabled={idx === filteredCategories.length - 1}
                         onClick={() => void handleMove(idx, 'down')}
                         aria-label={t('plan.moveDown', 'Di chuyển xuống')}
                         className="flex h-8 w-8 items-center justify-center rounded-lg text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-subtle)] disabled:opacity-20 cursor-pointer"

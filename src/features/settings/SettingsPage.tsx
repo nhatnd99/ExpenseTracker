@@ -12,7 +12,16 @@ import {
   Trash2,
   Lock,
   Settings2,
+  AlertTriangle,
+  Zap,
+  X,
 } from 'lucide-react'
+import {
+  formatCurrencyDisplay,
+  parseCurrencyToNumber,
+  formatCompactVnd,
+} from '@/utils/currency'
+import { db } from '@/db/database'
 import { PageContainer } from '@/components/layout/PageContainer'
 import { useSettings } from '@/context/useSettings'
 import { getTodayString, formatVnd } from '@/services/dateService'
@@ -41,7 +50,14 @@ const DEFAULT_FIXED_BILLS: FixedBillItem[] = [
 
 export function SettingsPage() {
   const { t } = useTranslation()
-  const { payDay, setPayDay, refreshDailyLimit } = useSettings()
+  const {
+    payDay,
+    setPayDay,
+    refreshDailyLimit,
+    quickAmounts,
+    addQuickAmount,
+    removeQuickAmount,
+  } = useSettings()
   const todayStr = useMemo(() => getTodayString(), [])
   const currentCycleMonth = useMemo(() => getCycleMonthForDate(todayStr, payDay), [todayStr, payDay])
 
@@ -50,12 +66,62 @@ export function SettingsPage() {
   const [budgetSaveSuccess, setBudgetSaveSuccess] = useState<boolean>(false)
   const [budgetErrorMsg, setBudgetErrorMsg] = useState<string | null>(null)
 
+  // Quick amounts input state
+  const [newQuickAmountRaw, setNewQuickAmountRaw] = useState<string>('')
+  const [quickAmountError, setQuickAmountError] = useState<string | null>(null)
+
+  const handleNewQuickAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const raw = e.target.value.replace(/\D/g, '')
+    setNewQuickAmountRaw(raw)
+    setQuickAmountError(null)
+  }
+
+  const handleAddQuickAmount = (e: React.FormEvent) => {
+    e.preventDefault()
+    const amount = parseCurrencyToNumber(newQuickAmountRaw)
+    if (!amount || amount <= 0) {
+      setQuickAmountError(t('settings.quickAmountInvalid', 'Vui lòng nhập số tiền hợp lệ lớn hơn 0.'))
+      return
+    }
+    if (quickAmounts.includes(amount)) {
+      setQuickAmountError(t('settings.quickAmountDuplicate', 'Số tiền này đã tồn tại trong danh sách phím tắt.'))
+      return
+    }
+    const success = addQuickAmount(amount)
+    if (success) {
+      setNewQuickAmountRaw('')
+      setQuickAmountError(null)
+    } else {
+      setQuickAmountError(t('settings.quickAmountDuplicate', 'Số tiền này đã tồn tại trong danh sách phím tắt.'))
+    }
+  }
+
   // Monthly income
   const [income, setIncome] = useState<number>(10_000_000)
 
   // Fixed Bills Modal & State
   const [isFixedBillsModalOpen, setIsFixedBillsModalOpen] = useState(false)
   const [fixedBills, setFixedBills] = useState<FixedBillItem[]>(DEFAULT_FIXED_BILLS)
+
+  // Danger Zone - Reset All Data State
+  const [isResetModalOpen, setIsResetModalOpen] = useState(false)
+  const [isResetting, setIsResetting] = useState(false)
+
+  const handleResetAllData = async () => {
+    setIsResetting(true)
+    try {
+      await db.delete()
+    } catch {
+      await Promise.all([
+        db.monthlyPlans.clear(),
+        db.categories.clear(),
+        db.allocations.clear(),
+        db.transactions.clear(),
+      ])
+    }
+    localStorage.clear()
+    window.location.reload()
+  }
 
   // Total Fixed Bills VND
   const fixedBillsTotalVnd = useMemo(() => {
@@ -345,7 +411,7 @@ export function SettingsPage() {
                   </div>
                   <div className="flex items-center justify-between text-[11px] text-[var(--color-text-secondary)]">
                     <span className="font-mono">
-                      {dailyPercent}% Daily ({formatVnd(dailyExpensesAmount)}) ÷ {activeCycle.totalDays} ngày
+                      {dailyPercent}% {t('settings.catDailyExpenses', 'Chi tiêu')} ({formatVnd(dailyExpensesAmount)}) ÷ {activeCycle.totalDays} {t('common.days', 'ngày')}
                     </span>
                     <span className="font-bold text-[var(--color-income)]">
                       {activeCycle.totalDays} {t('common.days', 'ngày')}
@@ -384,7 +450,7 @@ export function SettingsPage() {
                     </span>
 
                     <span className="text-[10px] text-[var(--color-text-muted)]">
-                      Fixed Bills: {fixedBillsPercent}% (tự tính)
+                      {t('settings.catFixedBills', 'Hóa đơn cố định')}: {fixedBillsPercent}% ({t('settings.autoCalculatedBadge', 'tự tính')})
                     </span>
                   </div>
                 </div>
@@ -463,7 +529,7 @@ export function SettingsPage() {
                           </span>
                           <span className="text-[10px] font-semibold text-[var(--color-primary)] bg-[var(--color-primary-soft)] px-1.5 py-0.5 rounded-md shrink-0 border border-[var(--color-primary)]/20 inline-flex items-center gap-0.5">
                             <Settings2 className="h-3 w-3" />
-                            <span>{fixedBills.length} khoản</span>
+                            <span>{fixedBills.length} {t('settings.billsCountUnit', 'khoản')}</span>
                           </span>
                         </div>
                       </div>
@@ -644,7 +710,7 @@ export function SettingsPage() {
                   {t('settings.compactPayday', 'Ngày Bắt Đầu Chu Kỳ (Payday)')}
                 </h2>
                 <p className="text-[10px] text-[var(--color-text-muted)] truncate font-mono">
-                  {t('settings.dayOption', { day: payDay })} (Mặc định: ngày 1)
+                  {t('settings.dayOption', { day: payDay })} {t('settings.defaultPaydayNotice', '(Mặc định: ngày 1)')}
                 </p>
               </div>
             </div>
@@ -734,7 +800,177 @@ export function SettingsPage() {
             </div>
           )}
         </div>
+
+        {/* ========================================================
+            SECTION 3: Quick Amounts (Phím tắt số tiền)
+            ======================================================== */}
+        <div className="rounded-3xl border border-[var(--color-border)] bg-[var(--color-bg-surface)] p-4 sm:p-5 shadow-2xs space-y-4 transition-colors box-border">
+          {/* Header */}
+          <div className="flex items-center gap-2.5 border-b border-[var(--color-border)] pb-3">
+            <div className="flex h-9 w-9 items-center justify-center rounded-2xl bg-amber-500/10 text-amber-600 dark:text-amber-400 shrink-0">
+              <Zap className="h-4.5 w-4.5" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <h2 className="text-sm font-bold text-[var(--color-text-primary)] leading-tight">
+                {t('settings.quickAmountsTitle', 'Phím Tắt Số Tiền')}
+              </h2>
+              <p className="text-xs text-[var(--color-text-muted)] truncate">
+                {t('settings.quickAmountsDesc', 'Thiết lập các mức tiền hay dùng để nhập nhanh khi ghi chép')}
+              </p>
+            </div>
+          </div>
+
+          {/* Current Chips list */}
+          <div className="space-y-2">
+            <span className="block text-[11px] font-bold uppercase tracking-wider text-[var(--color-text-secondary)]">
+              {t('settings.quickAmountsCurrentList', 'Danh sách phím tắt hiện có')} ({quickAmounts.length})
+            </span>
+
+            {quickAmounts.length === 0 ? (
+              <p className="text-xs text-[var(--color-text-muted)] italic py-2">
+                {t('settings.quickAmountsEmpty', 'Chưa có phím tắt số tiền nào. Hãy thêm số tiền bên dưới.')}
+              </p>
+            ) : (
+              <div className="flex flex-wrap gap-2 pt-0.5">
+                {quickAmounts.map((amt) => (
+                  <div
+                    key={amt}
+                    className="inline-flex items-center gap-1.5 pl-3 pr-1.5 py-1 rounded-full text-xs font-bold bg-[var(--color-bg-subtle)] border border-[var(--color-border)] text-[var(--color-text-primary)] shadow-2xs transition-all hover:border-[var(--color-border-focused)]"
+                  >
+                    <span>{formatCurrencyDisplay(String(amt))} ₫</span>
+                    <span className="text-[10px] text-[var(--color-text-muted)] font-mono">
+                      ({formatCompactVnd(amt)})
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => removeQuickAmount(amt)}
+                      className="flex h-5 w-5 items-center justify-center rounded-full hover:bg-rose-500/15 text-[var(--color-text-muted)] hover:text-rose-600 dark:hover:text-rose-400 transition-colors cursor-pointer"
+                      aria-label={t('settings.deleteQuickAmountAria', 'Xóa phím tắt {{amount}}', {
+                        amount: formatVnd(amt),
+                      })}
+                      title={t('common.delete', 'Xóa')}
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Add New Quick Amount Input Form */}
+          <form onSubmit={handleAddQuickAmount} className="space-y-2 pt-1 border-t border-[var(--color-border)]">
+            <label
+              htmlFor="new-quick-amount-input"
+              className="block text-[11px] font-bold uppercase tracking-wider text-[var(--color-text-secondary)]"
+            >
+              {t('settings.addQuickAmountLabel', 'Thêm phím tắt mới')}
+            </label>
+            <div className="flex items-center gap-2">
+              <div className="relative flex-1 min-w-0">
+                <input
+                  id="new-quick-amount-input"
+                  type="text"
+                  inputMode="numeric"
+                  value={newQuickAmountRaw ? formatCurrencyDisplay(newQuickAmountRaw) : ''}
+                  onChange={handleNewQuickAmountChange}
+                  placeholder={t('settings.addQuickAmountPlaceholder', 'Nhập số tiền (VD: 50,000)')}
+                  className="w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-bg-subtle)] pl-3 pr-12 py-2 text-xs font-bold text-[var(--color-text-primary)] placeholder-[var(--color-text-muted)] focus:bg-[var(--color-bg-surface)] focus:border-[var(--color-border-focused)] focus:outline-none transition-colors"
+                />
+                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-[var(--color-text-muted)]">
+                  ₫
+                </span>
+              </div>
+              <button
+                type="submit"
+                disabled={!newQuickAmountRaw || parseCurrencyToNumber(newQuickAmountRaw) <= 0}
+                className="shrink-0 py-2 px-3.5 rounded-xl bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] active:scale-95 text-xs font-bold text-white shadow-xs disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-all flex items-center gap-1.5"
+              >
+                <Plus className="h-3.5 w-3.5" />
+                <span>{t('settings.addQuickAmountBtn', 'Thêm')}</span>
+              </button>
+            </div>
+
+            {quickAmountError && (
+              <p className="text-xs text-rose-500 font-medium">
+                ⚠️ {quickAmountError}
+              </p>
+            )}
+          </form>
+        </div>
+
+        {/* ===================================================
+            SECTION 4: Danger Zone - Reset All Data
+            =================================================== */}
+        <div className="rounded-3xl border border-rose-500/30 bg-rose-500/5 p-4 sm:p-5 shadow-2xs space-y-3">
+          <div className="flex items-center gap-2 text-rose-600 dark:text-rose-400">
+            <AlertTriangle className="h-4 w-4 shrink-0" />
+            <h3 className="text-sm font-bold uppercase tracking-wider">
+              {t('settings.dangerZoneTitle', 'Khu Vực Nguy Hiểm')}
+            </h3>
+          </div>
+          <p className="text-xs text-[var(--color-text-muted)] leading-relaxed">
+            {t(
+              'settings.dangerZoneDesc',
+              'Xóa vĩnh viễn toàn bộ dữ liệu bao gồm các khoản chi tiêu, thu nhập, danh mục tùy chỉnh và kế hoạch ngân sách.',
+            )}
+          </p>
+          <button
+            type="button"
+            onClick={() => setIsResetModalOpen(true)}
+            className="w-full py-2.5 px-4 rounded-xl bg-rose-600 hover:bg-rose-700 active:scale-[0.99] text-white text-xs font-bold shadow-xs cursor-pointer transition-all flex items-center justify-center gap-2"
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+            <span>{t('settings.resetAppDataBtn', 'Xóa toàn bộ dữ liệu')}</span>
+          </button>
+        </div>
       </div>
+
+      {/* Confirmation Modal for Reset All Data */}
+      {isResetModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 overflow-hidden">
+          <div className="w-full max-w-sm rounded-3xl border border-rose-500/40 bg-[var(--color-bg-surface)] p-5 shadow-2xl space-y-4 animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-rose-500/10 text-rose-600 dark:text-rose-400 mx-auto">
+              <AlertTriangle className="h-6 w-6" />
+            </div>
+
+            <div className="text-center space-y-1.5">
+              <h3 className="text-base font-bold text-[var(--color-text-primary)]">
+                {t('settings.resetModalTitle', 'Xác Nhận Xóa Toàn Bộ Dữ Liệu?')}
+              </h3>
+              <p className="text-xs text-[var(--color-text-muted)] leading-relaxed">
+                {t(
+                  'settings.resetModalWarning',
+                  'Hành động này sẽ xóa toàn bộ giao dịch, cài đặt ngân sách và không thể khôi phục. Bạn có chắc chắn muốn tiếp tục?',
+                )}
+              </p>
+            </div>
+
+            <div className="grid grid-cols-2 gap-2 pt-1">
+              <button
+                type="button"
+                onClick={() => setIsResetModalOpen(false)}
+                disabled={isResetting}
+                className="py-2.5 rounded-xl border border-[var(--color-border)] bg-[var(--color-bg-subtle)] text-xs font-bold text-[var(--color-text-secondary)] hover:bg-[var(--color-border)] cursor-pointer transition-all"
+              >
+                {t('common.cancel', 'Hủy')}
+              </button>
+              <button
+                type="button"
+                onClick={() => void handleResetAllData()}
+                disabled={isResetting}
+                className="py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 active:scale-95 text-xs font-bold text-white shadow-md disabled:opacity-50 cursor-pointer transition-all flex items-center justify-center gap-1.5"
+              >
+                {isResetting ? (
+                  <span>{t('settings.resetting', 'Đang xóa…')}</span>
+                ) : (
+                  <span>{t('settings.confirmResetBtn', 'Xác nhận xóa')}</span>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Manage Fixed Bills Modal */}
       <ManageFixedBillsModal

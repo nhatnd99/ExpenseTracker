@@ -25,7 +25,7 @@ export function BottomNavigation() {
                 to={to}
                 end={to === '/'}
                 className={({ isActive }) =>
-                  `flex flex-col items-center justify-center py-2.5 text-center transition-all touch-target w-full ${
+                  `flex flex-col items-center justify-center pt-2 pb-1 text-center transition-all touch-target w-full ${
                     isActive
                       ? 'text-[var(--color-primary)] font-bold'
                       : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary)]'

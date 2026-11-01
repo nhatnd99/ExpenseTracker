@@ -81,10 +81,13 @@ describe('paydayCycle helpers', () => {
     expect(progressOffTrack.isOnTrack).toBe(false)
   })
 
-  it('formats compact currency properly', () => {
+  it('formats compact currency properly and avoids redundant .0M on round millions', () => {
     expect(formatCompactVnd(50_000)).toBe('50k')
     expect(formatCompactVnd(1_500_000)).toBe('1.5M')
     expect(formatCompactVnd(2_000_000)).toBe('2M')
+    expect(formatCompactVnd(5_000_000)).toBe('5M') // Not 5.0M
+    expect(formatCompactVnd(4_990_000)).toBe('5M') // Rounds to 5M, not 5.0M
+    expect(formatCompactVnd(4_900_000)).toBe('4.9M')
     expect(formatCompactVnd(500)).toBe('500')
   })
 

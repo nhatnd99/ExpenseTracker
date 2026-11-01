@@ -7,15 +7,16 @@ import { transactionRepository } from '@/repositories/transactionRepository'
 import { monthlyPlanRepository } from '@/repositories/monthlyPlanRepository'
 import { allocationRepository } from '@/repositories/allocationRepository'
 import { categoryRepository } from '@/repositories/categoryRepository'
-import { dateToMonthId } from '@/services/dateService'
+import { dateToMonthId, getTodayString } from '@/services/dateService'
 import { calculateDailyLimit } from '@/domain/budgetCalculator'
-import { getCycleMonthForDate, getPaydayCycle } from '@/features/reports/paydayCycle'
+import { getCycleMonthForDate, getPaydayCycle, type PaydayCycle } from '@/features/reports/paydayCycle'
 import type { Transaction, DateString, MonthId, BudgetCategory } from '@/types/models'
 
 export interface CreateTransactionInput {
   categoryId: string
   amountVnd: number
   date: DateString
+  type?: 'expense' | 'income'
   description?: string
   isExcludedFromDaily?: boolean
 }
@@ -25,11 +26,91 @@ export interface EnrichedTransaction extends Transaction {
   categoryIcon: string
 }
 
+export interface ExpenseBudgetMeta {
+  currentCycle: PaydayCycle
+  currentBaseBudget: number
+  cycleTransactions: Transaction[]
+  baseDailyLimit: number
+}
+
+/**
+ * Loads budget and cycle metadata for the Expense page.
+ * Provides the current cycle and cycle transactions (for today's Dynamic Safe-to-Spend)
+ * as well as the standard base daily limit for the selected date.
+ */
+export async function getExpenseBudgetMeta(
+  selectedDate: DateString,
+  payDay: number = 1,
+  todayStr: DateString = getTodayString(),
+): Promise<ExpenseBudgetMeta> {
+  const currentCycleMonth = getCycleMonthForDate(todayStr, payDay)
+  const currentCycle = getPaydayCycle(currentCycleMonth, payDay)
+
+  const selectedCycleMonth = getCycleMonthForDate(selectedDate, payDay)
+  const selectedCycle = getPaydayCycle(selectedCycleMonth, payDay)
+
+  const [currentPlan, selectedPlan, cycleTransactions] = await Promise.all([
+    monthlyPlanRepository.findByMonth(currentCycleMonth),
+    selectedCycleMonth === currentCycleMonth
+      ? null
+      : monthlyPlanRepository.findByMonth(selectedCycleMonth),
+    transactionRepository.findByDateRange(currentCycle.startDate, currentCycle.endDate),
+  ])
+
+  const activeSelectedPlan = selectedPlan ?? currentPlan
+
+  let currentBaseBudget = 0
+  if (currentPlan && currentPlan.incomeVnd > 0) {
+    const allocations = await allocationRepository.findByPlanId(currentPlan.id)
+    const dailyAlloc = allocations.find((a) => a.categoryId === 'cat-expenses')
+    const percent = dailyAlloc ? dailyAlloc.allocationPercent : 0
+    currentBaseBudget = Math.floor((currentPlan.incomeVnd * percent) / 100)
+  }
+
+  let baseDailyLimit = 0
+  if (activeSelectedPlan && activeSelectedPlan.incomeVnd > 0) {
+    const allocations = await allocationRepository.findByPlanId(activeSelectedPlan.id)
+    const dailyAlloc = allocations.find((a) => a.categoryId === 'cat-expenses')
+    const percent = dailyAlloc ? dailyAlloc.allocationPercent : 0
+    baseDailyLimit = calculateDailyLimit(activeSelectedPlan.incomeVnd, percent, selectedCycle.totalDays)
+  }
+
+  return {
+    currentCycle,
+    currentBaseBudget,
+    cycleTransactions,
+    baseDailyLimit,
+  }
+}
+
+export const DEFAULT_INCOME_CATEGORIES: Omit<BudgetCategory, 'createdAt' | 'updatedAt'>[] = [
+  { id: 'cat-inc-salary', name: 'Tiền lương', icon: 'Banknote', type: 'income', isFixedBill: false, sortOrder: 101 },
+  { id: 'cat-inc-bonus', name: 'Tiền thưởng', icon: 'Gift', type: 'income', isFixedBill: false, sortOrder: 102 },
+  { id: 'cat-inc-debt', name: 'Được trả nợ', icon: 'HandCoins', type: 'income', isFixedBill: false, sortOrder: 103 },
+  { id: 'cat-inc-selling', name: 'Bán thanh lý', icon: 'Tag', type: 'income', isFixedBill: false, sortOrder: 104 },
+  { id: 'cat-inc-extra', name: 'Thu nhập phụ', icon: 'Sparkles', type: 'income', isFixedBill: false, sortOrder: 105 },
+  { id: 'cat-inc-other', name: 'Thu nhập khác', icon: 'Coins', type: 'income', isFixedBill: false, sortOrder: 106 },
+]
+
 /**
  * Returns all categories available for transactions.
+ * Automatically seeds default income categories if none exist in the database.
  */
 export async function getCategories(): Promise<BudgetCategory[]> {
-  return categoryRepository.findAll()
+  const all = await categoryRepository.findAll()
+  const hasIncome = all.some((c) => c.type === 'income')
+  if (!hasIncome) {
+    const now = new Date().toISOString()
+    for (const c of DEFAULT_INCOME_CATEGORIES) {
+      await categoryRepository.create({
+        ...c,
+        createdAt: now,
+        updatedAt: now,
+      })
+    }
+    return categoryRepository.findAll()
+  }
+  return all
 }
 
 /**
@@ -117,8 +198,9 @@ export async function createTransaction(input: CreateTransactionInput): Promise<
     categoryId: input.categoryId,
     amountVnd: input.amountVnd,
     date: input.date,
+    type: input.type ?? 'expense',
     description: input.description?.trim() || undefined,
-    isExcludedFromDaily: Boolean(input.isExcludedFromDaily),
+    isExcludedFromDaily: input.type === 'income' ? false : Boolean(input.isExcludedFromDaily),
     status: 'cleared',
     createdAt: now,
     updatedAt: now,
@@ -131,7 +213,7 @@ export async function createTransaction(input: CreateTransactionInput): Promise<
 /** Updates an existing transaction's mutable fields */
 export async function updateTransaction(
   id: string,
-  changes: Partial<Pick<Transaction, 'amountVnd' | 'date' | 'categoryId' | 'description' | 'status' | 'isExcludedFromDaily'>>,
+  changes: Partial<Pick<Transaction, 'amountVnd' | 'date' | 'categoryId' | 'type' | 'description' | 'status' | 'isExcludedFromDaily'>>,
 ): Promise<void> {
   let monthlyPlanId: string | undefined
   if (changes.date) {

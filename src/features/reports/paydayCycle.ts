@@ -188,21 +188,21 @@ export function computeCycleProgress(
 }
 
 /**
- * Formats a VND number into a compact string for small calendar cells (e.g. 50000 -> 50k, 1500000 -> 1.5M)
+ * Formats a VND number into a compact string for small calendar cells (e.g. 50000 -> 50k, 5000000 -> 5M, 1500000 -> 1.5M)
+ * Avoids redundant trailing zeros (e.g. renders 5M instead of 5.0M) to save horizontal space on mobile.
  */
 export function formatCompactVnd(amount: number): string {
   const abs = Math.abs(amount)
   if (abs >= 1_000_000) {
-    const val = abs / 1_000_000
+    const val = Math.round((abs / 1_000_000) * 10) / 10
     const str = val % 1 === 0 ? val.toFixed(0) : val.toFixed(1)
     return `${str}M`
   }
   if (abs >= 1_000) {
-    const val = abs / 1_000
-    const str = val % 1 === 0 ? val.toFixed(0) : val.toFixed(0)
-    return `${str}k`
+    const val = Math.round(abs / 1_000)
+    return `${val}k`
   }
-  return `${abs}`
+  return `${Math.round(abs)}`
 }
 
 /**

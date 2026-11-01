@@ -35,7 +35,8 @@ export const CategorySelector: React.FC<CategorySelectorProps> = ({
         </button>
       </div>
 
-      <div className="grid grid-cols-4 gap-2">
+      {/* Horizontal Scrollable Categories List */}
+      <div className="flex flex-row overflow-x-auto gap-3 snap-x pb-2 pt-0.5 no-scrollbar overscroll-x-contain touch-pan-x">
         {categories.map((cat) => {
           const isSelected = selectedCategoryId === cat.id
           return (
@@ -43,16 +44,16 @@ export const CategorySelector: React.FC<CategorySelectorProps> = ({
               key={cat.id}
               type="button"
               onClick={() => onSelectCategory(cat.id)}
-              className={`flex flex-col items-center justify-center p-2.5 rounded-2xl border transition-all active:scale-95 cursor-pointer touch-target ${
+              className={`shrink-0 snap-start flex flex-col items-center justify-center w-18 h-18 sm:w-20 sm:h-20 p-2 rounded-2xl border transition-all active:scale-95 cursor-pointer touch-target ${
                 isSelected
                   ? 'border-[var(--color-primary)] bg-[var(--color-primary-soft)] text-[var(--color-primary)] shadow-2xs font-bold ring-2 ring-[var(--color-primary)]/20'
                   : 'border-[var(--color-border)] bg-[var(--color-bg-surface)] text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-subtle)]'
               }`}
             >
               <span className="flex h-7 w-7 items-center justify-center mb-1">
-                <CategoryIconRenderer icon={cat.icon} size={22} />
+                <CategoryIconRenderer icon={cat.icon} size={20} />
               </span>
-              <span className="text-[11px] truncate w-full text-center tracking-tight">
+              <span className="text-[11px] leading-tight truncate w-full text-center tracking-tight">
                 {cat.name}
               </span>
             </button>
@@ -63,9 +64,9 @@ export const CategorySelector: React.FC<CategorySelectorProps> = ({
         <button
           type="button"
           onClick={onOpenManager}
-          className="flex flex-col items-center justify-center p-2.5 rounded-2xl border border-dashed border-[var(--color-border)] bg-[var(--color-bg-subtle)] text-[var(--color-text-muted)] hover:border-[var(--color-primary)] hover:text-[var(--color-primary)] active:scale-95 cursor-pointer touch-target"
+          className="shrink-0 snap-start flex flex-col items-center justify-center w-18 h-18 sm:w-20 sm:h-20 p-2 rounded-2xl border border-dashed border-[var(--color-border)] bg-[var(--color-bg-subtle)] text-[var(--color-text-muted)] hover:border-[var(--color-primary)] hover:text-[var(--color-primary)] active:scale-95 cursor-pointer touch-target"
         >
-          <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-[var(--color-bg-surface)] text-sm mb-1">
+          <div className="flex h-7 w-7 items-center justify-center rounded-xl bg-[var(--color-bg-surface)] text-sm mb-1">
             <Plus className="h-4 w-4" />
           </div>
           <span className="text-[11px] tracking-tight">{t('common.add', 'Thêm')}</span>

@@ -7,6 +7,7 @@ import {
   SlidersHorizontal,
   ArrowRight,
   TrendingUp,
+  TrendingDown,
   AlertCircle,
   CheckCircle2,
   Calendar,
@@ -20,6 +21,7 @@ import { formatVnd, getTodayString } from '@/services/dateService'
 import { getCycleMonthForDate } from '@/features/reports/paydayCycle'
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner'
 import { CategoryIconRenderer } from '@/components/ui/CategoryIconRenderer'
+import { useDynamicBudget } from './hooks/useDynamicBudget'
 
 export function DashboardPage() {
   const { t } = useTranslation()
@@ -28,6 +30,13 @@ export function DashboardPage() {
   const currentCycleMonth = useMemo(() => getCycleMonthForDate(todayStr, payDay), [todayStr, payDay])
   const [data, setData] = useState<DashboardData | null>(null)
   const [loading, setLoading] = useState<boolean>(true)
+
+  const dynamicBudget = useDynamicBudget({
+    cycle: data?.cycle,
+    baseBudget: data?.summary.totalExpenseBudgetVnd,
+    transactions: data?.transactions,
+    todayStr,
+  })
 
   useEffect(() => {
     let active = true
@@ -174,66 +183,116 @@ export function DashboardPage() {
           </div>
         </div>
 
-        {/* Today's Spending Allowance */}
-        <div className="rounded-3xl border border-[var(--color-border)] bg-[var(--color-bg-surface)] p-5 shadow-2xs transition-colors">
-          <div className="flex items-center justify-between">
+        {/* Dynamic Safe-to-Spend Dashboard Card */}
+        <div className="rounded-3xl border border-[var(--color-border)] bg-[var(--color-bg-surface)] p-5 shadow-2xs transition-colors space-y-4">
+          <div className="flex items-start justify-between gap-3">
             <div>
               <div className="flex items-center gap-1.5">
-                <TrendingUp className="h-3.5 w-3.5 text-[var(--color-text-muted)]" />
-                <p className="text-xs font-semibold uppercase tracking-wider text-[var(--color-text-secondary)]">
-                  {t('dashboard.todayDailyBudget')}
+                <Sparkles className="h-4 w-4 text-[var(--color-primary)]" />
+                <p className="text-xs font-bold uppercase tracking-wider text-[var(--color-text-secondary)]">
+                  {t('dashboard.safeToSpendToday', 'Hôm nay bạn có thể tiêu')}
                 </p>
               </div>
-              <p className="mt-1 text-2xl font-bold text-[var(--color-text-primary)] amount-display">
-                {formatVnd(summary.dailyBudgetVnd)}
+              <p className="mt-1 text-3xl font-extrabold text-[var(--color-text-primary)] amount-display tracking-tight">
+                {formatVnd(dynamicBudget.todayLimit)}
               </p>
             </div>
 
-            {todayStatus && (
-              <div
-                className={`flex items-center gap-1 rounded-full px-3 py-1 text-xs font-bold ${
-                  todayStatus.isOverBudget
-                    ? 'bg-[var(--color-expense-soft)] text-[var(--color-expense)] border border-[var(--color-expense-border)]'
-                    : 'bg-[var(--color-income-soft)] text-[var(--color-income)] border border-[var(--color-income-border)]'
-                }`}
-              >
-                {todayStatus.isOverBudget ? (
-                  <>
-                    <AlertCircle className="h-3 w-3" />
-                    <span>{t('dashboard.overBudget')}</span>
-                  </>
-                ) : (
-                  <>
-                    <CheckCircle2 className="h-3 w-3" />
-                    <span>{t('dashboard.onTrack')}</span>
-                  </>
-                )}
-              </div>
+            {/* Status Badge */}
+            <div
+              className={`flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-bold shrink-0 ${
+                dynamicBudget.isOnTrack
+                  ? 'bg-[var(--color-income-soft)] text-[var(--color-income)] border border-[var(--color-income-border)]'
+                  : 'bg-[var(--color-expense-soft)] text-[var(--color-expense)] border border-[var(--color-expense-border)]'
+              }`}
+            >
+              {dynamicBudget.isOnTrack ? (
+                <>
+                  <CheckCircle2 className="h-3.5 w-3.5" />
+                  <span>{t('dashboard.onTrack', 'Đúng Kế Hoạch')}</span>
+                </>
+              ) : (
+                <>
+                  <AlertCircle className="h-3.5 w-3.5" />
+                  <span>{t('dashboard.overBudget', 'Vượt Hạn Mức')}</span>
+                </>
+              )}
+            </div>
+          </div>
+
+          {/* Pace / Rollover Banner */}
+          <div
+            className={`flex items-center gap-2.5 rounded-2xl p-3 text-xs font-semibold border ${
+              dynamicBudget.paceBalance > 0
+                ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
+                : dynamicBudget.paceBalance < 0
+                  ? 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20'
+                  : 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20'
+            }`}
+          >
+            {dynamicBudget.paceBalance > 0 ? (
+              <>
+                <TrendingUp className="h-4 w-4 shrink-0" />
+                <span>
+                  {t(
+                    'dashboard.paceAhead',
+                    'Tuyệt vời! Bạn đang tiết kiệm được {{amount}} so với tiến độ',
+                    { amount: formatVnd(dynamicBudget.paceBalance) },
+                  )}
+                </span>
+              </>
+            ) : dynamicBudget.paceBalance < 0 ? (
+              <>
+                <TrendingDown className="h-4 w-4 shrink-0" />
+                <span>
+                  {t(
+                    'dashboard.paceBehind',
+                    'Chú ý! Bạn đang tiêu lố {{amount}}, hãy thắt chặt chi tiêu',
+                    { amount: formatVnd(Math.abs(dynamicBudget.paceBalance)) },
+                  )}
+                </span>
+              </>
+            ) : (
+              <>
+                <CheckCircle2 className="h-4 w-4 shrink-0" />
+                <span>{t('dashboard.paceOnTrack', 'Tuyệt vời! Bạn đang chi tiêu đúng tiến độ kế hoạch')}</span>
+              </>
             )}
           </div>
 
-          {todayStatus && (
-            <div className="mt-3.5 grid grid-cols-2 gap-2 border-t border-[var(--color-border)] pt-3 text-xs">
-              <div>
-                <span className="text-[var(--color-text-muted)]">{t('dashboard.todaySpent')}:</span>
-                <p className="mt-0.5 font-bold text-[var(--color-text-primary)] amount-display">
-                  {formatVnd(todayStatus.spentVnd)}
-                </p>
-              </div>
-              <div>
-                <span className="text-[var(--color-text-muted)]">{t('dashboard.todayRemaining')}:</span>
-                <p
-                  className={`mt-0.5 font-bold amount-display ${
-                    todayStatus.remainingVnd < 0
-                      ? 'text-[var(--color-expense)]'
-                      : 'text-[var(--color-income)]'
-                  }`}
-                >
-                  {formatVnd(todayStatus.remainingVnd)}
-                </p>
-              </div>
+          {/* Additional details grid */}
+          <div className="grid grid-cols-3 gap-2 border-t border-[var(--color-border)] pt-3 text-xs">
+            <div>
+              <span className="text-[var(--color-text-muted)] block text-[11px]">
+                {t('dashboard.todaySpent', 'Hôm Nay Đã Tiêu')}:
+              </span>
+              <p className="mt-0.5 font-bold text-[var(--color-text-primary)] amount-display">
+                {formatVnd(todayStatus?.spentVnd ?? 0)}
+              </p>
             </div>
-          )}
+            <div>
+              <span className="text-[var(--color-text-muted)] block text-[11px]">
+                {t('dashboard.remainingMonthBudget', 'Quỹ tháng còn lại')}:
+              </span>
+              <p
+                className={`mt-0.5 font-bold amount-display ${
+                  dynamicBudget.remainingBudget <= 0
+                    ? 'text-[var(--color-expense)]'
+                    : 'text-[var(--color-income)]'
+                }`}
+              >
+                {formatVnd(Math.max(0, dynamicBudget.remainingBudget))}
+              </p>
+            </div>
+            <div className="text-right">
+              <span className="text-[var(--color-text-muted)] block text-[11px]">
+                {t('dashboard.remainingDays', 'Số ngày còn lại')}:
+              </span>
+              <p className="mt-0.5 font-bold text-[var(--color-text-primary)] font-mono">
+                {dynamicBudget.remainingDays} {t('common.days', 'ngày')}
+              </p>
+            </div>
+          </div>
         </div>
 
         {/* Quick Actions */}
@@ -292,8 +351,13 @@ export function DashboardPage() {
                       </p>
                     </div>
                   </div>
-                  <span className="text-xs font-bold text-[var(--color-expense)] amount-display">
-                    -{formatVnd(tx.amountVnd)}
+                  <span
+                    className={`text-xs font-bold amount-display ${
+                      tx.type === 'income' ? 'text-[var(--color-income)]' : 'text-[var(--color-expense)]'
+                    }`}
+                  >
+                    {tx.type === 'income' ? '+' : '-'}
+                    {formatVnd(tx.amountVnd)}
                   </span>
                 </div>
               ))}

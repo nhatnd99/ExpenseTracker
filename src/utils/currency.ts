@@ -23,3 +23,5 @@ export function parseCurrencyToNumber(rawNumberString: string): number {
   return cleanNumber ? parseInt(cleanNumber, 10) : 0
 }
 
+export { formatCompactVnd } from '@/features/reports/paydayCycle'
+

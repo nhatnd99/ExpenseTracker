@@ -61,8 +61,13 @@ export const ExpenseItem: React.FC<ExpenseItemProps> = ({
 
       {/* Right section: Amount + Edit action */}
       <div className="flex items-center gap-2 flex-shrink-0 pl-2">
-        <span className="text-sm font-bold text-[var(--color-expense)] amount-display">
-          -{formatVnd(expense.amountVnd)}
+        <span
+          className={`text-sm font-bold amount-display ${
+            expense.type === 'income' ? 'text-[var(--color-income)]' : 'text-[var(--color-expense)]'
+          }`}
+        >
+          {expense.type === 'income' ? '+' : '-'}
+          {formatVnd(expense.amountVnd)}
         </span>
         {showEditIcon && (
           <div className="flex h-7 w-7 items-center justify-center rounded-lg text-[var(--color-text-muted)] hover:text-[var(--color-primary)]">

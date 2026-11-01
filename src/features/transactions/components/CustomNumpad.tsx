@@ -1,4 +1,5 @@
 import React from 'react'
+import { useTranslation } from 'react-i18next'
 import { Delete, Check, RotateCcw } from 'lucide-react'
 
 interface CustomNumpadProps {
@@ -8,6 +9,7 @@ interface CustomNumpadProps {
   onSubmit: () => void
   isSubmitDisabled?: boolean
   submitLabel?: string
+  variant?: 'expense' | 'income'
 }
 
 export const CustomNumpad: React.FC<CustomNumpadProps> = ({
@@ -16,8 +18,11 @@ export const CustomNumpad: React.FC<CustomNumpadProps> = ({
   onClear,
   onSubmit,
   isSubmitDisabled = false,
-  submitLabel = 'Xác nhận',
+  submitLabel,
+  variant = 'expense',
 }) => {
+  const { t } = useTranslation()
+  const effectiveSubmitLabel = submitLabel || t('common.confirm', 'Xác nhận')
   const triggerHaptic = () => {
     if (typeof window !== 'undefined' && 'vibrate' in navigator) {
       try {
@@ -44,12 +49,12 @@ export const CustomNumpad: React.FC<CustomNumpadProps> = ({
   }
 
   const keyBaseClass =
-    'flex h-13 items-center justify-center rounded-2xl text-xl font-bold transition-transform active:scale-95 select-none cursor-pointer'
-  const numKeyClass = `${keyBaseClass} bg-[var(--color-bg-surface)] text-[var(--color-text-primary)] border border-[var(--color-border)] shadow-2xs hover:bg-[var(--color-bg-subtle)]`
-  const fnKeyClass = `${keyBaseClass} bg-[var(--color-bg-subtle)] text-[var(--color-text-secondary)] border border-[var(--color-border)] shadow-2xs hover:bg-[var(--color-border)]`
+    'flex h-12 items-center justify-center rounded-xl sm:rounded-2xl text-xl font-bold transition-transform active:scale-95 select-none cursor-pointer'
+  const numKeyClass = `${keyBaseClass} bg-gray-800 text-white border border-gray-700/80 shadow-2xs hover:bg-gray-700 active:bg-gray-600`
+  const fnKeyClass = `${keyBaseClass} bg-gray-800/70 text-gray-300 border border-gray-700/60 shadow-2xs hover:bg-gray-700 active:bg-gray-650`
 
   return (
-    <div className="grid grid-cols-4 gap-2 px-3 pt-3 pb-[calc(env(safe-area-inset-bottom,0px)+1rem)] bg-[var(--color-bg-surface)] border-t border-[var(--color-border)] rounded-t-3xl shadow-lg">
+    <div className="grid grid-cols-4 gap-1.5 sm:gap-2 w-full select-none">
       {/* Row 1 */}
       <button type="button" onClick={() => handlePress('1')} className={numKeyClass}>1</button>
       <button type="button" onClick={() => handlePress('2')} className={numKeyClass}>2</button>
@@ -58,7 +63,7 @@ export const CustomNumpad: React.FC<CustomNumpadProps> = ({
         type="button"
         onClick={handleDelete}
         aria-label="Delete"
-        className={`${fnKeyClass} text-[var(--color-expense)]`}
+        className={`${fnKeyClass} text-rose-400 hover:text-rose-300`}
       >
         <Delete className="h-5 w-5" />
       </button>
@@ -81,7 +86,7 @@ export const CustomNumpad: React.FC<CustomNumpadProps> = ({
         onClick={handleClear}
         aria-label="Clear all"
         title="Clear"
-        className={`${fnKeyClass} text-[var(--color-text-muted)]`}
+        className={`${fnKeyClass} text-gray-400 hover:text-gray-200`}
       >
         <RotateCcw className="h-4 w-4" />
       </button>
@@ -93,9 +98,13 @@ export const CustomNumpad: React.FC<CustomNumpadProps> = ({
           onSubmit()
         }}
         disabled={isSubmitDisabled}
-        className={`${keyBaseClass} col-span-2 bg-[var(--color-primary)] text-white shadow-md hover:bg-[var(--color-primary-hover)] disabled:bg-[var(--color-bg-subtle)] disabled:text-[var(--color-text-muted)] disabled:cursor-not-allowed disabled:scale-100`}
+        className={`${keyBaseClass} col-span-2 ${
+          variant === 'income'
+            ? 'bg-emerald-600 hover:bg-emerald-700 shadow-emerald-500/20'
+            : 'bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)]'
+        } text-white shadow-md disabled:bg-gray-800 disabled:text-gray-500 disabled:border-gray-700/40 disabled:cursor-not-allowed disabled:scale-100`}
       >
-        <span className="text-sm font-bold mr-1.5">{submitLabel}</span>
+        <span className="text-sm font-bold mr-1.5">{effectiveSubmitLabel}</span>
         <Check className="h-4 w-4 stroke-[2.5]" />
       </button>
     </div>

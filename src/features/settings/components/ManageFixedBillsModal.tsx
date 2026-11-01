@@ -84,7 +84,7 @@ export const ManageFixedBillsModal: React.FC<ManageFixedBillsModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-xs p-0 sm:p-4 overflow-hidden">
-      <div className="w-full sm:w-[92vw] sm:max-w-md max-w-full rounded-t-3xl sm:rounded-3xl border border-[var(--color-border)] bg-[var(--color-bg-surface)] p-4 sm:p-5 pb-[calc(env(safe-area-inset-bottom,0px)+1rem)] sm:pb-5 shadow-2xl max-h-[88dvh] flex flex-col overflow-hidden box-border mx-auto">
+      <div className="w-full sm:w-[92vw] sm:max-w-md max-w-full rounded-t-3xl sm:rounded-3xl border border-[var(--color-border)] bg-[var(--color-bg-surface)] p-4 sm:p-5 pb-[max(0.75rem,env(safe-area-inset-bottom,0px))] sm:pb-5 shadow-2xl max-h-[88dvh] flex flex-col overflow-hidden box-border mx-auto">
         {/* Header */}
         <div className="shrink-0 flex items-center justify-between border-b border-[var(--color-border)] pb-3">
           <div className="flex items-center gap-2">
@@ -223,7 +223,7 @@ export const ManageFixedBillsModal: React.FC<ManageFixedBillsModalProps> = ({
                             type="button"
                             onClick={() => handleSaveEdit(item.id)}
                             className="p-1.5 rounded-lg bg-[var(--color-income-soft)] text-[var(--color-income)] hover:bg-[var(--color-income-soft)]/80 cursor-pointer"
-                            aria-label="Lưu"
+                            aria-label={t('common.save', 'Lưu')}
                           >
                             <Check className="h-3.5 w-3.5" />
                           </button>
@@ -231,7 +231,7 @@ export const ManageFixedBillsModal: React.FC<ManageFixedBillsModalProps> = ({
                             type="button"
                             onClick={handleCancelEdit}
                             className="p-1.5 rounded-lg text-[var(--color-text-muted)] hover:bg-[var(--color-bg-subtle)] cursor-pointer"
-                            aria-label="Hủy"
+                            aria-label={t('common.cancel', 'Hủy')}
                           >
                             <X className="h-3.5 w-3.5" />
                           </button>
@@ -251,7 +251,7 @@ export const ManageFixedBillsModal: React.FC<ManageFixedBillsModalProps> = ({
                             <button
                               type="button"
                               onClick={() => handleStartEdit(item)}
-                              aria-label="Sửa khoản"
+                              aria-label={t('common.edit', 'Sửa')}
                               className="p-1.5 text-[var(--color-text-muted)] hover:text-[var(--color-primary)] hover:bg-[var(--color-bg-subtle)] rounded-lg cursor-pointer transition-colors"
                             >
                               <Edit2 className="h-3.5 w-3.5" />
@@ -259,7 +259,7 @@ export const ManageFixedBillsModal: React.FC<ManageFixedBillsModalProps> = ({
                             <button
                               type="button"
                               onClick={() => handleDelete(item.id)}
-                              aria-label="Xóa khoản"
+                              aria-label={t('common.delete', 'Xóa')}
                               className="p-1.5 text-[var(--color-text-muted)] hover:text-[var(--color-expense)] hover:bg-[var(--color-expense-soft)] rounded-lg cursor-pointer transition-colors"
                             >
                               <Trash2 className="h-3.5 w-3.5" />

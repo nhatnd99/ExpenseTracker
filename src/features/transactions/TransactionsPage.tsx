@@ -1,5 +1,6 @@
 import { useEffect, useState, useMemo, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
+import { isToday } from 'date-fns'
 import {
   Plus,
   ChevronLeft,
@@ -14,16 +15,18 @@ import { PageContainer } from '@/components/layout/PageContainer'
 import { getTodayString, shiftDate, parseDateString, formatVnd } from '@/services/dateService'
 import {
   getTransactionsForDate,
-  getDailyBudgetForDate,
   getCategories,
   createTransaction,
   updateTransaction,
   deleteTransaction,
+  getExpenseBudgetMeta,
+  type ExpenseBudgetMeta,
   type EnrichedTransaction,
 } from './transactionService'
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner'
 import type { BudgetCategory } from '@/types/models'
 import { useSettings } from '@/context/useSettings'
+import { useDynamicBudget } from '@/features/dashboard/hooks/useDynamicBudget'
 import { CreateExpenseModal } from './components/CreateExpenseModal'
 import { ExpenseItem } from './components/ExpenseItem'
 
@@ -35,7 +38,7 @@ export function TransactionsPage() {
   // Daily view focus: default state is Today
   const [selectedDate, setSelectedDate] = useState<string>(today)
   const [transactions, setTransactions] = useState<EnrichedTransaction[]>([])
-  const [dailyBudget, setDailyBudget] = useState<number>(0)
+  const [budgetMeta, setBudgetMeta] = useState<ExpenseBudgetMeta | null>(null)
   const [categories, setCategories] = useState<BudgetCategory[]>([])
   const [loading, setLoading] = useState<boolean>(true)
 
@@ -43,19 +46,19 @@ export function TransactionsPage() {
   const [activeTransaction, setActiveTransaction] = useState<EnrichedTransaction | null | undefined>(null)
   const isModalOpen = activeTransaction !== null
 
-  // Reload transactions and daily budget for the specified date
+  // Reload transactions and daily budget meta for the specified date
   const reloadData = useCallback(async (date: string) => {
     try {
-      const [txs, budget] = await Promise.all([
+      const [txs, meta] = await Promise.all([
         getTransactionsForDate(date),
-        getDailyBudgetForDate(date, payDay),
+        getExpenseBudgetMeta(date, payDay, today),
       ])
       setTransactions(txs)
-      setDailyBudget(budget)
+      setBudgetMeta(meta)
     } finally {
       setLoading(false)
     }
-  }, [payDay])
+  }, [payDay, today])
 
   const reloadCategories = useCallback(async () => {
     const cats = await getCategories()
@@ -66,15 +69,15 @@ export function TransactionsPage() {
     let active = true
 
     async function loadInitial() {
-      const [cats, txs, budget] = await Promise.all([
+      const [cats, txs, meta] = await Promise.all([
         getCategories(),
         getTransactionsForDate(selectedDate),
-        getDailyBudgetForDate(selectedDate, payDay),
+        getExpenseBudgetMeta(selectedDate, payDay, today),
       ])
       if (active) {
         setCategories(cats)
         setTransactions(txs)
-        setDailyBudget(budget)
+        setBudgetMeta(meta)
         setLoading(false)
       }
     }
@@ -84,42 +87,81 @@ export function TransactionsPage() {
     return () => {
       active = false
     }
-  }, [selectedDate, payDay])
+  }, [selectedDate, payDay, today])
 
-  // 1. Total spent on this selected date (EXCLUDING fixed bills / large expenses)
+  // Branching: Check whether viewing today using isToday from date-fns
+  const isDateToday = useMemo(() => {
+    try {
+      return isToday(parseDateString(selectedDate))
+    } catch {
+      return selectedDate === today
+    }
+  }, [selectedDate, today])
+
+  // Hook calculating Dynamic Safe-to-Spend identical to Dashboard
+  const dynamicBudget = useDynamicBudget({
+    cycle: budgetMeta?.currentCycle,
+    baseBudget: budgetMeta?.currentBaseBudget,
+    transactions: budgetMeta?.cycleTransactions,
+    todayStr: today,
+  })
+
+  // Dynamic / Static Branching:
+  // If isToday: Limit = safeToSpend (dynamicBudget.todayLimit)
+  // If not today: Limit = baseDailyLimit (standard static budget)
+  const effectiveDailyLimit = useMemo(() => {
+    if (isDateToday) {
+      return dynamicBudget.todayLimit
+    }
+    return budgetMeta?.baseDailyLimit ?? 0
+  }, [isDateToday, dynamicBudget.todayLimit, budgetMeta?.baseDailyLimit])
+
+  // 1. Total spent on this selected date (EXCLUDING fixed bills / large expenses and excluding income)
   const totalDailySpent = useMemo(() => {
     return transactions
-      .filter((tx) => !tx.isExcludedFromDaily)
+      .filter((tx) => tx.type !== 'income' && !tx.isExcludedFromDaily)
       .reduce((sum, tx) => sum + tx.amountVnd, 0)
   }, [transactions])
 
   // Total excluded bills on this selected date
   const totalExcludedBillsToday = useMemo(() => {
     return transactions
-      .filter((tx) => Boolean(tx.isExcludedFromDaily))
+      .filter((tx) => tx.type !== 'income' && Boolean(tx.isExcludedFromDaily))
+      .reduce((sum, tx) => sum + tx.amountVnd, 0)
+  }, [transactions])
+
+  // Total income received on this selected date
+  const totalDailyIncome = useMemo(() => {
+    return transactions
+      .filter((tx) => tx.type === 'income')
       .reduce((sum, tx) => sum + tx.amountVnd, 0)
   }, [transactions])
 
   // 2. Remaining balance: [Hạn mức ngày] - [Tổng chi tiêu sinh hoạt ngày]
   const remainingBalance = useMemo(() => {
-    return dailyBudget - totalDailySpent
-  }, [dailyBudget, totalDailySpent])
+    return effectiveDailyLimit - totalDailySpent
+  }, [effectiveDailyLimit, totalDailySpent])
 
   // 3. Visual warning flag: true if user spent more than the daily limit
   const isOverBudget = useMemo(() => {
-    return dailyBudget > 0 && remainingBalance < 0
-  }, [dailyBudget, remainingBalance])
+    if (effectiveDailyLimit <= 0) {
+      return totalDailySpent > 0
+    }
+    return remainingBalance < 0
+  }, [effectiveDailyLimit, remainingBalance, totalDailySpent])
 
   // 4. Percentage of daily budget consumed
   const rawSpentPercent = useMemo(() => {
-    if (dailyBudget <= 0) return 0
-    return Math.round((totalDailySpent / dailyBudget) * 100)
-  }, [totalDailySpent, dailyBudget])
+    if (effectiveDailyLimit <= 0) {
+      return totalDailySpent > 0 ? 100 : 0
+    }
+    return Math.round((totalDailySpent / effectiveDailyLimit) * 100)
+  }, [totalDailySpent, effectiveDailyLimit])
 
+  // Bound progress bar at 100% so it never overflows or breaks the UI
   const progressPercent = useMemo(() => {
-    if (dailyBudget <= 0) return 0
     return Math.min(100, Math.max(0, rawSpentPercent))
-  }, [rawSpentPercent, dailyBudget])
+  }, [rawSpentPercent])
 
   // Date navigation handlers
   const handlePrevDay = () => {
@@ -142,6 +184,7 @@ export function TransactionsPage() {
     date: string
     description?: string
     isExcludedFromDaily?: boolean
+    type?: 'expense' | 'income'
   }) => {
     if (data.id) {
       // Update existing record
@@ -151,6 +194,7 @@ export function TransactionsPage() {
         date: data.date,
         description: data.description,
         isExcludedFromDaily: data.isExcludedFromDaily,
+        type: data.type,
       })
     } else {
       // Create new record
@@ -160,6 +204,7 @@ export function TransactionsPage() {
         date: data.date,
         description: data.description,
         isExcludedFromDaily: data.isExcludedFromDaily,
+        type: data.type,
       })
     }
     // Refresh for the currently selected date
@@ -277,7 +322,7 @@ export function TransactionsPage() {
               <span>{t('transactions.dailyTotal', 'Ngân Sách Ngày')}</span>
             </div>
 
-            {dailyBudget > 0 ? (
+            {effectiveDailyLimit > 0 || totalDailySpent > 0 ? (
               <span
                 className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold ${
                   isOverBudget
@@ -306,13 +351,15 @@ export function TransactionsPage() {
 
           {/* 3 Columns: Daily Limit | Total Spent | Remaining Balance */}
           <div className="grid grid-cols-3 gap-1 sm:gap-2 divide-x divide-[var(--color-border)] pt-0.5">
-            {/* Col 1: Daily Limit (Hạn mức ngày) */}
+            {/* Col 1: Daily Limit (Hạn mức ngày: Safe-to-Spend nếu là Hôm nay, Standard nếu là ngày khác) */}
             <div className="text-center px-1 min-w-0">
               <span className="block text-[10px] font-bold uppercase tracking-wider text-[var(--color-text-muted)] truncate">
-                {t('transactions.dailyBudget', 'Hạn Mức')}
+                {isDateToday
+                  ? t('transactions.safeToSpend', 'Hôm Nay Có Thể Tiêu')
+                  : t('transactions.standardDailyLimit', 'Hạn Mức Tiêu Chuẩn')}
               </span>
               <p className="mt-1 text-sm sm:text-base font-extrabold amount-display text-[var(--color-text-primary)] truncate">
-                {formatVnd(dailyBudget)}
+                {formatVnd(effectiveDailyLimit)}
               </p>
             </div>
 
@@ -348,19 +395,21 @@ export function TransactionsPage() {
           </div>
 
           {/* Progress Bar (Visual budget burn rate) */}
-          {dailyBudget > 0 && (
+          {(effectiveDailyLimit > 0 || totalDailySpent > 0) && (
             <div className="space-y-1.5 pt-1 border-t border-[var(--color-border)]">
               <div className="flex items-center justify-between text-[10px] font-semibold text-[var(--color-text-muted)]">
                 <span>
-                  {t('transactions.spentPercent', {
-                    percent: rawSpentPercent,
-                    defaultValue: `Đã chi ${rawSpentPercent}%`,
-                  })}
+                  {isOverBudget || rawSpentPercent > 100
+                    ? `100% (${formatVnd(totalDailySpent)})`
+                    : t('transactions.spentPercent', {
+                        percent: rawSpentPercent,
+                        defaultValue: `Đã chi ${rawSpentPercent}%`,
+                      })}
                 </span>
-                <span>
-                  {rawSpentPercent > 100
-                    ? `+${rawSpentPercent - 100}% ${t('transactions.overBudget', 'vượt mức')}`
-                    : `${100 - rawSpentPercent}% ${t('common.remaining', 'còn lại')}`}
+                <span className={isOverBudget ? 'text-[var(--color-expense)] font-bold' : ''}>
+                  {isOverBudget || rawSpentPercent > 100
+                    ? t('transactions.overBudget', 'Vượt hạn mức')
+                    : `${Math.max(0, 100 - rawSpentPercent)}% ${t('common.remaining', 'còn lại')}`}
                 </span>
               </div>
               <div className="h-2 w-full rounded-full bg-[var(--color-bg-subtle)] overflow-hidden">
@@ -387,6 +436,19 @@ export function TransactionsPage() {
               </span>
               <span className="font-bold text-[var(--color-primary)] amount-display">
                 {formatVnd(totalExcludedBillsToday)}
+              </span>
+            </div>
+          )}
+
+          {/* Extra Income callout if any received today */}
+          {totalDailyIncome > 0 && (
+            <div className="flex items-center justify-between text-[11px] pt-1.5 border-t border-[var(--color-border)] text-[var(--color-text-muted)]">
+              <span className="flex items-center gap-1 font-medium">
+                <Wallet className="h-3.5 w-3.5 text-[var(--color-income)] shrink-0" />
+                <span>{t('transactions.incomeToday', 'Thu nhập nhận được hôm nay')}:</span>
+              </span>
+              <span className="font-bold text-[var(--color-income)] amount-display">
+                +{formatVnd(totalDailyIncome)}
               </span>
             </div>
           )}

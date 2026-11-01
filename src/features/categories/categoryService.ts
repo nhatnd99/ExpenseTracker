@@ -5,12 +5,13 @@
 import { crypto } from '@/utils/crypto'
 import { db } from '@/db/database'
 import { categoryRepository } from '@/repositories/categoryRepository'
-import type { BudgetCategory } from '@/types/models'
+import type { BudgetCategory, CategoryType } from '@/types/models'
 
 export interface CreateCategoryInput {
   name: string
   icon?: string
   isFixedBill?: boolean
+  type?: CategoryType
 }
 
 export async function getAllCategories(): Promise<BudgetCategory[]> {
@@ -27,6 +28,7 @@ export async function addCategory(input: CreateCategoryInput): Promise<BudgetCat
     name: input.name.trim(),
     icon: input.icon?.trim() || '🏷️',
     isFixedBill: Boolean(input.isFixedBill),
+    type: input.type ?? 'expense',
     sortOrder: maxSortOrder + 1,
     createdAt: now,
     updatedAt: now,
@@ -38,7 +40,7 @@ export async function addCategory(input: CreateCategoryInput): Promise<BudgetCat
 
 export async function updateCategory(
   id: string,
-  changes: Partial<Pick<BudgetCategory, 'name' | 'icon' | 'sortOrder' | 'isFixedBill'>>,
+  changes: Partial<Pick<BudgetCategory, 'name' | 'icon' | 'sortOrder' | 'isFixedBill' | 'type'>>,
 ): Promise<void> {
   await categoryRepository.update(id, changes)
 }

@@ -15,7 +15,7 @@ import {
   calculateTotalExcludedBills,
 } from '@/domain/dashboardCalculator'
 import { getPaydayCycle, type PaydayCycle } from '@/features/reports/paydayCycle'
-import type { MonthId, MonthlyBudgetSummary, DailyBudgetStatus, DateString } from '@/types/models'
+import type { MonthId, MonthlyBudgetSummary, DailyBudgetStatus, DateString, Transaction } from '@/types/models'
 import type { EnrichedTransaction } from '@/features/transactions/transactionService'
 import { getTodayString } from '@/services/dateService'
 
@@ -26,6 +26,7 @@ export interface DashboardData {
   recentTransactions: EnrichedTransaction[]
   cycle: PaydayCycle
   totalExcludedBills: number
+  transactions: Transaction[]
 }
 
 /**
@@ -99,5 +100,5 @@ export async function getDashboardData(
     }
   })
 
-  return { summary, dailyStatuses, todayStatus, recentTransactions, cycle, totalExcludedBills }
+  return { summary, dailyStatuses, todayStatus, recentTransactions, cycle, totalExcludedBills, transactions }
 }

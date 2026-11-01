@@ -1,5 +1,6 @@
 import { useEffect, useState, useMemo, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
+import { isBefore, isSameDay, isAfter } from 'date-fns'
 import {
   Calendar,
   Wallet,
@@ -16,6 +17,7 @@ import { PageContainer } from '@/components/layout/PageContainer'
 import { getTodayString, parseDateString, formatVnd } from '@/services/dateService'
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner'
 import { useSettings } from '@/context/useSettings'
+import { useDynamicBudget } from '@/features/dashboard/hooks/useDynamicBudget'
 import {
   getCategories,
   updateTransaction,
@@ -128,15 +130,73 @@ export function ReportsPage() {
     setSelectedMonth(currentCycleMonth)
   }
 
+  // Dynamic Safe-to-Spend hook calculating reactive safeToSpend
+  const dynamicBudget = useDynamicBudget({
+    cycle: data?.cycle,
+    baseBudget: data?.progress.budgetVnd,
+    transactions: data?.transactions,
+    todayStr,
+  })
+  const safeToSpend = dynamicBudget.todayLimit
+  const baseDailyLimit = data?.baseDailyLimit ?? (data?.cycle.totalDays ? Math.round(data.progress.budgetVnd / data.cycle.totalDays) : 0)
+
+  // 3-State Time Logic Calendar Grid:
+  // 1. Quá khứ: Balance = baseDailyLimit - spentOnThisDay
+  // 2. Hôm nay: Balance = safeToSpend - spentOnThisDay
+  // 3. Tương lai: Balance = safeToSpend (Projection)
+  const calendarDays = useMemo(() => {
+    if (!data) return []
+    const todayDateObj = parseDateString(todayStr)
+
+    return data.cycle.days.map((date) => {
+      const dayNumber = parseInt(date.slice(8), 10)
+      const cellDateObj = parseDateString(date)
+
+      // Group spent strictly excluding fixed bills (isExcludedFromDaily)
+      const spentVnd = data.dailySpentMap[date] || 0
+
+      const isPast = isBefore(cellDateObj, todayDateObj)
+      const isToday = isSameDay(cellDateObj, todayDateObj)
+      const isFuture = isAfter(cellDateObj, todayDateObj)
+
+      let balanceVnd: number
+      if (isPast) {
+        balanceVnd = baseDailyLimit - spentVnd
+      } else if (isToday) {
+        balanceVnd = safeToSpend - spentVnd
+      } else {
+        balanceVnd = safeToSpend
+      }
+
+      return {
+        date,
+        dayNumber,
+        spentVnd,
+        balanceVnd,
+        isToday,
+        isFuture,
+      }
+    })
+  }, [data, todayStr, baseDailyLimit, safeToSpend])
+
   // Transactions list for the selected day in the details sheet
   const selectedDayTransactions = useMemo(() => {
     if (!data || !selectedDateForDetails) return []
     return data.transactions.filter((tx) => tx.date === selectedDateForDetails)
   }, [data, selectedDateForDetails])
 
-  // Total spent on the selected day
-  const selectedDayTotalSpent = useMemo(() => {
-    return selectedDayTransactions.reduce((sum, tx) => sum + tx.amountVnd, 0)
+  // Daily expenses on selected day (excluding fixed bills)
+  const selectedDayDailySpent = useMemo(() => {
+    return selectedDayTransactions
+      .filter((tx) => !tx.isExcludedFromDaily)
+      .reduce((sum, tx) => sum + tx.amountVnd, 0)
+  }, [selectedDayTransactions])
+
+  // Excluded fixed bills on selected day
+  const selectedDayExcludedBills = useMemo(() => {
+    return selectedDayTransactions
+      .filter((tx) => Boolean(tx.isExcludedFromDaily))
+      .reduce((sum, tx) => sum + tx.amountVnd, 0)
   }, [selectedDayTransactions])
 
   // Formatted label for selected day header (e.g. "31/10/2026")
@@ -190,7 +250,7 @@ export function ReportsPage() {
             <button
               type="button"
               onClick={handlePrevCycle}
-              aria-label="Chu kỳ trước"
+              aria-label={t('reports.prevCycle', 'Chu kỳ trước')}
               className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-[var(--color-bg-subtle)] text-[var(--color-text-secondary)] hover:bg-[var(--color-border)] active:scale-95 transition-all cursor-pointer"
             >
               <ChevronLeft className="h-5 w-5" />
@@ -228,7 +288,7 @@ export function ReportsPage() {
             <button
               type="button"
               onClick={handleNextCycle}
-              aria-label="Chu kỳ sau"
+              aria-label={t('reports.nextCycle', 'Chu kỳ sau')}
               className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-[var(--color-bg-subtle)] text-[var(--color-text-secondary)] hover:bg-[var(--color-border)] active:scale-95 transition-all cursor-pointer"
             >
               <ChevronRight className="h-5 w-5" />
@@ -401,73 +461,77 @@ export function ReportsPage() {
               </div>
 
               {/* Day Cells Grid */}
-              <div className="grid grid-cols-7 gap-1">
+              <div className="grid grid-cols-7 gap-1 sm:gap-1.5">
                 {/* Empty slots for week alignment */}
                 {Array.from({ length: startDayOffset }).map((_, i) => (
                   <div
                     key={`empty-${i}`}
-                    className="min-h-[58px] sm:min-h-[66px] rounded-2xl bg-[var(--color-bg-subtle)]/40 border border-transparent"
+                    className="min-h-[62px] sm:min-h-[70px] rounded-2xl bg-[var(--color-bg-subtle)]/30 border border-transparent"
                   />
                 ))}
 
                 {/* Daily Item Cells - Interactive with onClick */}
-                {data.dailyItems.map((day) => {
+                {calendarDays.map((day) => {
                   const hasSpent = day.spentVnd > 0
                   const isPositiveBalance = day.balanceVnd >= 0
                   const isSelected = selectedDateForDetails === day.date
+
+                  const cellClasses = isSelected
+                    ? 'border-[var(--color-primary)] ring-2 ring-[var(--color-primary)] bg-[var(--color-primary-soft)]'
+                    : day.isToday
+                      ? 'border-[var(--color-primary)] ring-2 ring-[var(--color-primary)]/40 bg-[var(--color-primary-soft)]/60 dark:bg-blue-900/25 shadow-2xs'
+                      : day.isFuture
+                        ? 'border-[var(--color-border)]/70 bg-[var(--color-bg-surface)] hover:border-[var(--color-primary)]'
+                        : 'border-[var(--color-border)] bg-[var(--color-bg-surface)] hover:border-[var(--color-primary)] hover:bg-[var(--color-bg-subtle)]'
 
                   return (
                     <button
                       key={day.date}
                       type="button"
                       onClick={() => setSelectedDateForDetails(day.date)}
-                      className={`flex flex-col justify-between p-1 rounded-2xl border transition-all min-h-[58px] sm:min-h-[66px] overflow-hidden min-w-0 cursor-pointer active:scale-95 text-left ${
-                        isSelected
-                          ? 'border-[var(--color-primary)] ring-2 ring-[var(--color-primary)] bg-[var(--color-primary-soft)]'
-                          : day.isToday
-                            ? 'border-[var(--color-primary)] ring-2 ring-[var(--color-primary)]/30 bg-[var(--color-primary-soft)]/50'
-                            : day.isFuture
-                              ? 'border-[var(--color-border)] bg-[var(--color-bg-surface)] opacity-55 hover:border-[var(--color-primary)]'
-                              : 'border-[var(--color-border)] bg-[var(--color-bg-surface)] hover:border-[var(--color-primary)] hover:bg-[var(--color-bg-subtle)]'
-                      }`}
+                      className={`flex flex-col justify-between h-full min-h-[62px] sm:min-h-[70px] p-1 sm:p-1.5 rounded-2xl border transition-all overflow-hidden min-w-0 cursor-pointer active:scale-95 text-left box-border ${cellClasses}`}
                     >
-                      {/* Top: Day number */}
-                      <div className="flex items-center justify-between w-full leading-none">
+                      {/* Top: Day number (Căn góc trái trên cùng self-start, font bold) */}
+                      <div className="flex items-center justify-between w-full self-start leading-none">
                         <span
                           className={`text-[10px] sm:text-xs font-bold leading-none ${
                             day.isToday
                               ? 'text-[var(--color-primary)]'
-                              : 'text-[var(--color-text-primary)]'
+                              : day.isFuture
+                                ? 'text-[var(--color-text-muted)]'
+                                : 'text-[var(--color-text-primary)]'
                           }`}
                         >
                           {day.dayNumber}
                         </span>
                         {day.isToday && (
-                          <span className="h-1.5 w-1.5 rounded-full bg-[var(--color-primary)]" />
+                          <span className="h-1.5 w-1.5 rounded-full bg-[var(--color-primary)] ring-2 ring-[var(--color-primary)]/40 animate-pulse" />
                         )}
                       </div>
 
-                      {/* Middle: Spent amount */}
-                      <div className="text-center my-0.5 min-w-0 w-full">
+                      {/* Middle: Spent amount (Căn giữa ô flex-1 items-center justify-center, font nhỏ vừa phải) */}
+                      <div className="flex-1 flex items-center justify-center w-full min-w-0 my-0.5">
                         {hasSpent ? (
-                          <span className="block text-[10px] font-extrabold amount-display text-[var(--color-expense)] truncate leading-none">
+                          <span className="block text-[10px] sm:text-xs font-medium amount-display text-[var(--color-expense)] truncate leading-none text-center">
                             -{formatCompactVnd(day.spentVnd)}
                           </span>
                         ) : (
-                          <span className="block text-[9px] text-[var(--color-text-muted)] leading-none">
+                          <span className="block text-[10px] text-gray-400/50 dark:text-gray-600 font-normal leading-none select-none">
                             -
                           </span>
                         )}
                       </div>
 
-                      {/* Bottom: Daily balance */}
-                      <div className="text-center min-w-0 w-full">
+                      {/* Bottom: Daily balance (Căn góc phải dưới cùng self-end, font nhỏ text-[10px]) */}
+                      <div className="w-full self-end flex justify-end min-w-0 leading-none">
                         {data.progress.budgetVnd > 0 ? (
                           <span
-                            className={`block text-[9px] font-semibold amount-display truncate leading-none ${
-                              isPositiveBalance
-                                ? 'text-[var(--color-income)]'
-                                : 'text-[var(--color-expense)] font-bold'
+                            className={`block text-[9px] sm:text-[10px] amount-display truncate leading-none text-right ${
+                              day.isFuture
+                                ? 'text-[var(--color-income)] opacity-70 font-medium'
+                                : isPositiveBalance
+                                  ? 'text-[var(--color-income)] font-semibold'
+                                  : 'text-[var(--color-expense)] font-bold'
                             }`}
                           >
                             {isPositiveBalance
@@ -475,7 +539,7 @@ export function ReportsPage() {
                               : `-${formatCompactVnd(Math.abs(day.balanceVnd))}`}
                           </span>
                         ) : (
-                          <span className="block text-[8px] text-[var(--color-text-muted)] truncate leading-none">
+                          <span className="block text-[8px] text-[var(--color-text-muted)] truncate leading-none opacity-40">
                             {day.date.slice(5)}
                           </span>
                         )}
@@ -486,7 +550,7 @@ export function ReportsPage() {
               </div>
 
               {/* Legend */}
-              <div className="flex items-center justify-center gap-4 pt-2 text-[10px] font-medium text-[var(--color-text-muted)] border-t border-[var(--color-border)]">
+              <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1.5 pt-2.5 text-[10px] font-medium text-[var(--color-text-muted)] border-t border-[var(--color-border)]">
                 <div className="flex items-center gap-1.5">
                   <span className="h-2 w-2 rounded-full bg-[var(--color-expense)]" />
                   <span>{t('reports.spent', 'Đã chi')} (-k)</span>
@@ -494,6 +558,10 @@ export function ReportsPage() {
                 <div className="flex items-center gap-1.5">
                   <span className="h-2 w-2 rounded-full bg-[var(--color-income)]" />
                   <span>{t('reports.balance', 'Số dư')} (+k)</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span className="h-2 w-2 rounded-full bg-[var(--color-income)] opacity-70" />
+                  <span>{t('reports.projection', 'Dự báo')} (+k)</span>
                 </div>
                 <div className="flex items-center gap-1.5">
                   <span className="h-2 w-2 rounded-full bg-[var(--color-primary)]" />
@@ -518,9 +586,15 @@ export function ReportsPage() {
                 <p className="text-xs text-[var(--color-text-muted)] mt-0.5">
                   {t('reports.dayTotalSpent', 'Tổng chi trong ngày')}:{' '}
                   <span className="font-extrabold text-[var(--color-expense)] amount-display">
-                    {formatVnd(selectedDayTotalSpent)}
+                    {formatVnd(selectedDayDailySpent)}
                   </span>
                 </p>
+                {selectedDayExcludedBills > 0 && (
+                  <p className="text-[11px] text-[var(--color-primary)] mt-0.5 font-medium flex items-center gap-1">
+                    <Receipt className="h-3 w-3 shrink-0" />
+                    <span>{t('transactions.billsToday', 'Hóa đơn lớn')}: {formatVnd(selectedDayExcludedBills)}</span>
+                  </p>
+                )}
               </div>
               <button
                 type="button"
@@ -595,7 +669,7 @@ export function ReportsPage() {
             </div>
 
             {/* Bottom Sheet Footer */}
-            <div className="shrink-0 p-3 border-t border-[var(--color-border)] pb-[calc(env(safe-area-inset-bottom,0px)+0.75rem)]">
+            <div className="shrink-0 p-3 border-t border-[var(--color-border)] pb-[max(0.5rem,env(safe-area-inset-bottom,0px))]">
               <button
                 type="button"
                 onClick={() => setSelectedDateForDetails(null)}

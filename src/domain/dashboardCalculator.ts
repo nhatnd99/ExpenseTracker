@@ -16,6 +16,7 @@ export function groupTransactionsByDate(
 ): Map<DateString, number> {
   const map = new Map<DateString, number>()
   for (const tx of transactions) {
+    if (tx.type === 'income') continue
     if (excludeBills && tx.isExcludedFromDaily) continue
     map.set(tx.date, (map.get(tx.date) ?? 0) + tx.amountVnd)
   }
@@ -24,24 +25,27 @@ export function groupTransactionsByDate(
 
 /**
  * Calculates total spent on a specific date, filtering ONLY transactions
- * where isExcludedFromDaily === false (protecting the daily limit from large fixed bills).
+ * where isExcludedFromDaily === false (protecting the daily limit from large fixed bills)
+ * and ignoring income transactions.
  */
 export function calculateSpentToday(
   transactions: Transaction[],
   date: DateString,
 ): number {
   return transactions
-    .filter((tx) => tx.date === date && !tx.isExcludedFromDaily)
+    .filter((tx) => tx.date === date && tx.type !== 'income' && !tx.isExcludedFromDaily)
     .reduce((sum, tx) => sum + tx.amountVnd, 0)
 }
 
 /**
- * Calculates total spent across the entire month (includes all expenses and fixed bills).
+ * Calculates total spent across the entire month (includes all expenses and fixed bills, excluding income).
  */
 export function calculateTotalMonthlySpent(
   transactions: Transaction[],
 ): number {
-  return transactions.reduce((sum, tx) => sum + tx.amountVnd, 0)
+  return transactions
+    .filter((tx) => tx.type !== 'income')
+    .reduce((sum, tx) => sum + tx.amountVnd, 0)
 }
 
 /**
@@ -51,7 +55,7 @@ export function calculateTotalExcludedBills(
   transactions: Transaction[],
 ): number {
   return transactions
-    .filter((tx) => Boolean(tx.isExcludedFromDaily))
+    .filter((tx) => tx.type !== 'income' && Boolean(tx.isExcludedFromDaily))
     .reduce((sum, tx) => sum + tx.amountVnd, 0)
 }
 
@@ -87,6 +91,7 @@ export function getTopSpendingCategories(
 ): Array<{ categoryId: string; totalVnd: number }> {
   const map = new Map<string, number>()
   for (const tx of transactions) {
+    if (tx.type === 'income') continue
     map.set(tx.categoryId, (map.get(tx.categoryId) ?? 0) + tx.amountVnd)
   }
   return [...map.entries()]

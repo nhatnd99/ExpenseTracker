@@ -16,7 +16,7 @@ export function LanguageSwitcher() {
       type="button"
       onClick={toggleLanguage}
       aria-label={t('language.select')}
-      title={currentLang === 'en' ? 'Chuyển sang Tiếng Việt' : 'Switch to English'}
+      title={currentLang === 'en' ? t('language.switchToVi', 'Chuyển sang Tiếng Việt') : t('language.switchToEn', 'Switch to English')}
       className="flex h-9 items-center gap-1.5 rounded-xl border border-[var(--color-border)] bg-[var(--color-bg-surface)] px-2.5 text-xs font-bold text-[var(--color-text-secondary)] shadow-2xs transition-colors hover:bg-[var(--color-bg-subtle)] hover:text-[var(--color-text-primary)] cursor-pointer"
     >
       <Languages className="h-3.5 w-3.5 text-[var(--color-primary)]" />

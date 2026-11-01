@@ -44,6 +44,8 @@ export interface MonthlyPlan {
 // Budget Category
 // ---------------------------------------------------------------------------
 
+export type CategoryType = 'expense' | 'income'
+
 /**
  * A named spending or savings category defined by the user.
  * Categories are global; their per-month allocation percentages are stored
@@ -54,6 +56,8 @@ export interface BudgetCategory {
   name: string
   /** Optional emoji or icon identifier for display */
   icon?: string
+  /** Type of category: expense (default) or income */
+  type?: CategoryType
   /** Whether expenses in this category are fixed bills/large expenses (excluded from daily limit by default) */
   isFixedBill?: boolean
   /** Display order */
@@ -93,6 +97,7 @@ export interface MonthlyAllocation {
 // ---------------------------------------------------------------------------
 
 export type TransactionStatus = 'pending' | 'cleared'
+export type TransactionType = 'expense' | 'income'
 
 /**
  * A single expense or income transaction recorded by the user.
@@ -101,10 +106,12 @@ export interface Transaction {
   id: Id
   monthlyPlanId: Id
   categoryId: Id
-  /** Amount in integer VND (positive = expense, negative = refund) */
+  /** Amount in integer VND */
   amountVnd: number
   /** Date of the transaction in "YYYY-MM-DD" format */
   date: DateString
+  /** Type of transaction: expense (default) or income */
+  type?: TransactionType
   /** Optional user note */
   description?: string
   /** Whether this expense is excluded from the daily spending limit calculation (e.g. fixed bills) */
