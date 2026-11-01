@@ -78,13 +78,15 @@ export async function getCycleReportData(
   // Compute progress (On Track / Off Track)
   const progress = computeCycleProgress(budgetVnd, totalSpentVnd, cycle, todayStr)
 
-  // Group spent by date
+  // Group spent by date (only daily expenses, excluding fixed bills)
   const dailySpentMap: Record<DateString, number> = {}
   for (const date of cycle.days) {
     dailySpentMap[date] = 0
   }
   for (const tx of transactions) {
-    dailySpentMap[tx.date] = (dailySpentMap[tx.date] || 0) + tx.amountVnd
+    if (!tx.isExcludedFromDaily) {
+      dailySpentMap[tx.date] = (dailySpentMap[tx.date] || 0) + tx.amountVnd
+    }
   }
 
   // Compute daily items

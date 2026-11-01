@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { X, Calendar as CalendarIcon, Trash2 } from 'lucide-react'
 import type { BudgetCategory } from '@/types/models'
@@ -23,6 +23,7 @@ export interface CreateExpenseModalProps {
     categoryId: string
     date: string
     description?: string
+    isExcludedFromDaily?: boolean
   }) => Promise<void>
   onDelete?: (id: string) => Promise<void>
 }
@@ -54,17 +55,38 @@ export const CreateExpenseModal: React.FC<CreateExpenseModalProps> = ({
     initialTransaction?.date || initialDate || getTodayString()
   )
   const [note, setNote] = useState<string>(initialTransaction?.description || '')
-  const [submitting, setSubmitting] = useState(false)
-  const [isCategoryManagerOpen, setIsCategoryManagerOpen] = useState(false)
-  const [errorMessage, setErrorMessage] = useState<string | null>(null)
-
-  if (!isOpen) return null
 
   // Ensure active category ID is valid
   const activeCategoryId =
     selectedCategoryId && categories.some((c) => c.id === selectedCategoryId)
       ? selectedCategoryId
       : categories[0]?.id ?? ''
+
+  // State for excluding from daily spending limit
+  const [isExcludedFromDaily, setIsExcludedFromDaily] = useState<boolean>(() => {
+    if (initialTransaction) {
+      return Boolean(initialTransaction.isExcludedFromDaily)
+    }
+    const cat = categories.find((c) => c.id === activeCategoryId)
+    return Boolean(cat?.isFixedBill)
+  })
+
+  const prevCategoryIdRef = useRef(activeCategoryId)
+
+  // Smart Auto-Toggle: when user selects a category, automatically sync toggle with category.isFixedBill
+  useEffect(() => {
+    if (prevCategoryIdRef.current !== activeCategoryId) {
+      prevCategoryIdRef.current = activeCategoryId
+      const cat = categories.find((c) => c.id === activeCategoryId)
+      setIsExcludedFromDaily(Boolean(cat?.isFixedBill))
+    }
+  }, [activeCategoryId, categories])
+
+  const [submitting, setSubmitting] = useState(false)
+  const [isCategoryManagerOpen, setIsCategoryManagerOpen] = useState(false)
+  const [errorMessage, setErrorMessage] = useState<string | null>(null)
+
+  if (!isOpen) return null
 
   const handleQuickDate = (daysAgo: number) => {
     const d = new Date()
@@ -98,6 +120,7 @@ export const CreateExpenseModal: React.FC<CreateExpenseModalProps> = ({
         categoryId: activeCategoryId,
         date,
         description: note.trim() || undefined,
+        isExcludedFromDaily,
       })
 
       onClose()
@@ -235,6 +258,49 @@ export const CreateExpenseModal: React.FC<CreateExpenseModalProps> = ({
               onChange={setNote}
               categoryId={activeCategoryId}
             />
+
+            {/* Toggle Switch: Exclude from Daily Limit (Smart Categories) */}
+            <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg-subtle)] p-3 flex items-center justify-between gap-3 transition-colors box-border">
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <span className="text-xs font-bold text-[var(--color-text-primary)]">
+                    {t('transactions.excludeFromDailyLabel', 'Không trừ vào Hạn mức ngày')}
+                  </span>
+                  {isExcludedFromDaily && (
+                    <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-[var(--color-income-soft)] text-[var(--color-income)] border border-[var(--color-income-border)] shrink-0">
+                      {t('transactions.excludedBadge', 'Đã bảo vệ')}
+                    </span>
+                  )}
+                </div>
+                <p className="text-[11px] text-[var(--color-text-muted)] mt-0.5 leading-snug">
+                  {t(
+                    'transactions.excludeFromDailyHelp',
+                    'Dành cho hóa đơn lớn (tiền nhà, điện nước...). Không làm âm số tiền được tiêu hôm nay.',
+                  )}
+                </p>
+              </div>
+
+              {/* Toggle Switch Button (Tailwind CSS) */}
+              <button
+                type="button"
+                role="switch"
+                aria-checked={isExcludedFromDaily}
+                onClick={() => setIsExcludedFromDaily((prev) => !prev)}
+                className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:ring-offset-2 ${
+                  isExcludedFromDaily ? 'bg-[var(--color-primary)]' : 'bg-zinc-300 dark:bg-zinc-700'
+                }`}
+              >
+                <span className="sr-only">
+                  {t('transactions.excludeFromDailyLabel', 'Không trừ vào Hạn mức ngày')}
+                </span>
+                <span
+                  aria-hidden="true"
+                  className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-md ring-0 transition duration-200 ease-in-out ${
+                    isExcludedFromDaily ? 'translate-x-5' : 'translate-x-0'
+                  }`}
+                />
+              </button>
+            </div>
 
             {errorMessage && (
               <p className="rounded-xl border border-[var(--color-expense-border)] bg-[var(--color-expense-soft)] p-2.5 text-xs text-[var(--color-expense)] font-medium text-center">

@@ -9,11 +9,11 @@ import { db } from './database'
 import type { BudgetCategory } from '@/types/models'
 
 const DEFAULT_CATEGORIES: Omit<BudgetCategory, 'createdAt' | 'updatedAt'>[] = [
-  { id: 'cat-expenses', name: 'Daily Expenses', icon: '🛒', sortOrder: 1 },
-  { id: 'cat-fixed', name: 'Fixed Amount', icon: '🏠', sortOrder: 2 },
-  { id: 'cat-savings', name: 'Savings', icon: '🏦', sortOrder: 3 },
-  { id: 'cat-investment', name: 'Investment', icon: '📈', sortOrder: 4 },
-  { id: 'cat-emergency', name: 'Emergency Fund', icon: '🆘', sortOrder: 5 },
+  { id: 'cat-expenses', name: 'Daily Expenses', icon: '🛒', isFixedBill: false, sortOrder: 1 },
+  { id: 'cat-fixed', name: 'Fixed Bills', icon: '🏠', isFixedBill: true, sortOrder: 2 },
+  { id: 'cat-savings', name: 'Savings', icon: '🏦', isFixedBill: true, sortOrder: 3 },
+  { id: 'cat-investment', name: 'Investment', icon: '📈', isFixedBill: true, sortOrder: 4 },
+  { id: 'cat-emergency', name: 'Emergency Fund', icon: '🆘', isFixedBill: true, sortOrder: 5 },
 ]
 
 export async function seedDefaultCategories(): Promise<void> {

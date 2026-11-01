@@ -17,6 +17,7 @@ export interface CreateTransactionInput {
   amountVnd: number
   date: DateString
   description?: string
+  isExcludedFromDaily?: boolean
 }
 
 export interface EnrichedTransaction extends Transaction {
@@ -117,6 +118,7 @@ export async function createTransaction(input: CreateTransactionInput): Promise<
     amountVnd: input.amountVnd,
     date: input.date,
     description: input.description?.trim() || undefined,
+    isExcludedFromDaily: Boolean(input.isExcludedFromDaily),
     status: 'cleared',
     createdAt: now,
     updatedAt: now,
@@ -129,7 +131,7 @@ export async function createTransaction(input: CreateTransactionInput): Promise<
 /** Updates an existing transaction's mutable fields */
 export async function updateTransaction(
   id: string,
-  changes: Partial<Pick<Transaction, 'amountVnd' | 'date' | 'categoryId' | 'description' | 'status'>>,
+  changes: Partial<Pick<Transaction, 'amountVnd' | 'date' | 'categoryId' | 'description' | 'status' | 'isExcludedFromDaily'>>,
 ): Promise<void> {
   let monthlyPlanId: string | undefined
   if (changes.date) {

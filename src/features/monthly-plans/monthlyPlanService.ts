@@ -23,21 +23,67 @@ export interface PlanWithDetails {
   plan: MonthlyPlan | null
   allocations: MonthlyAllocation[]
   categories: BudgetCategory[]
+  isFromGlobalTemplate?: boolean
+}
+
+export const GLOBAL_TEMPLATE_KEY = 'global_budget_template'
+
+export interface GlobalBudgetTemplate {
+  incomeVnd: number
+  allocations: Array<{ categoryId: string; allocationPercent: number }>
+}
+
+export function getGlobalBudgetTemplate(): GlobalBudgetTemplate | null {
+  try {
+    const raw = localStorage.getItem(GLOBAL_TEMPLATE_KEY)
+    if (raw) return JSON.parse(raw) as GlobalBudgetTemplate
+  } catch {
+    // ignore
+  }
+  return null
+}
+
+export function saveGlobalBudgetTemplate(template: GlobalBudgetTemplate): void {
+  try {
+    localStorage.setItem(GLOBAL_TEMPLATE_KEY, JSON.stringify(template))
+  } catch {
+    // ignore
+  }
 }
 
 /**
  * Loads a monthly plan with its category allocations and all available categories.
+ * If no plan exists for this month, falls back to the Global Budget Template if available.
  */
 export async function getPlanWithAllocations(month: MonthId): Promise<PlanWithDetails> {
   const categories = await categoryRepository.findAll()
   const plan = await monthlyPlanRepository.findByMonth(month)
 
   if (!plan) {
-    return { plan: null, allocations: [], categories }
+    const globalTemplate = getGlobalBudgetTemplate()
+    if (globalTemplate && globalTemplate.incomeVnd > 0) {
+      const fallbackAllocations: MonthlyAllocation[] = globalTemplate.allocations.map((a) => ({
+        id: `template-${a.categoryId}`,
+        monthlyPlanId: 'template',
+        categoryId: a.categoryId,
+        allocationPercent: a.allocationPercent,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      }))
+      const fallbackPlan: MonthlyPlan = {
+        id: 'template',
+        month,
+        incomeVnd: globalTemplate.incomeVnd,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      }
+      return { plan: fallbackPlan, allocations: fallbackAllocations, categories, isFromGlobalTemplate: true }
+    }
+    return { plan: null, allocations: [], categories, isFromGlobalTemplate: false }
   }
 
   const allocations = await allocationRepository.findByPlanId(plan.id)
-  return { plan, allocations, categories }
+  return { plan, allocations, categories, isFromGlobalTemplate: false }
 }
 
 /**
@@ -109,8 +155,19 @@ export async function updateMonthlyPlan(
 
 /**
  * Saves a monthly plan (creates new or updates existing).
+ * If applyToAllMonths is true, also updates the global default template.
  */
-export async function saveMonthlyPlan(input: CreatePlanInput): Promise<MonthlyPlan> {
+export async function saveMonthlyPlan(
+  input: CreatePlanInput,
+  applyToAllMonths: boolean = false,
+): Promise<MonthlyPlan> {
+  if (applyToAllMonths) {
+    saveGlobalBudgetTemplate({
+      incomeVnd: input.incomeVnd,
+      allocations: input.allocations,
+    })
+  }
+
   const existing = await monthlyPlanRepository.findByMonth(input.month)
   if (existing) {
     await updateMonthlyPlan(existing.id, {

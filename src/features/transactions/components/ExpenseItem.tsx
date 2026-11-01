@@ -41,9 +41,16 @@ export const ExpenseItem: React.FC<ExpenseItemProps> = ({
 
         {/* Content Box: flex-1 ml-3 min-w-0 */}
         <div className="flex-1 ml-3 min-w-0">
-          <p className="text-sm font-bold text-[var(--color-text-primary)] truncate">
-            {expense.categoryName}
-          </p>
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <p className="text-sm font-bold text-[var(--color-text-primary)] truncate">
+              {expense.categoryName}
+            </p>
+            {expense.isExcludedFromDaily && (
+              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-[var(--color-primary-soft)] text-[var(--color-primary)] border border-[var(--color-primary)]/20 shrink-0">
+                {t('transactions.excludedShortBadge', 'Hóa đơn')}
+              </span>
+            )}
+          </div>
           <p className="text-xs text-[var(--color-text-muted)] truncate">
             {expense.description
               ? expense.description

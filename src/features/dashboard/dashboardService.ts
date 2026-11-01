@@ -8,7 +8,12 @@ import { allocationRepository } from '@/repositories/allocationRepository'
 import { transactionRepository } from '@/repositories/transactionRepository'
 import { categoryRepository } from '@/repositories/categoryRepository'
 import { buildMonthlyBudgetSummary, parseMonthId, calculateDailyBudget } from '@/domain/budgetCalculator'
-import { computeDailyStatuses } from '@/domain/dashboardCalculator'
+import {
+  computeDailyStatuses,
+  calculateSpentToday,
+  calculateTotalMonthlySpent,
+  calculateTotalExcludedBills,
+} from '@/domain/dashboardCalculator'
 import { getPaydayCycle, type PaydayCycle } from '@/features/reports/paydayCycle'
 import type { MonthId, MonthlyBudgetSummary, DailyBudgetStatus, DateString } from '@/types/models'
 import type { EnrichedTransaction } from '@/features/transactions/transactionService'
@@ -20,6 +25,7 @@ export interface DashboardData {
   todayStatus: DailyBudgetStatus | null
   recentTransactions: EnrichedTransaction[]
   cycle: PaydayCycle
+  totalExcludedBills: number
 }
 
 /**
@@ -41,7 +47,8 @@ export async function getDashboardData(
   ])
 
   const categoryMap = new Map(categories.map((c) => [c.id, c]))
-  const totalSpentVnd = transactions.reduce((sum, tx) => sum + tx.amountVnd, 0)
+  const totalSpentVnd = calculateTotalMonthlySpent(transactions)
+  const totalExcludedBills = calculateTotalExcludedBills(transactions)
 
   const allocations = await allocationRepository.findByPlanId(plan.id)
 
@@ -67,9 +74,7 @@ export async function getDashboardData(
   )
 
   const activeToday = todayStr ?? getTodayString()
-  const todaySpent = transactions
-    .filter((tx) => tx.date === activeToday)
-    .reduce((sum, tx) => sum + tx.amountVnd, 0)
+  const todaySpent = calculateSpentToday(transactions, activeToday)
   const todayRemaining = dailyBudgetVnd - todaySpent
   const todayStatus: DailyBudgetStatus = {
     date: activeToday,
@@ -94,5 +99,5 @@ export async function getDashboardData(
     }
   })
 
-  return { summary, dailyStatuses, todayStatus, recentTransactions, cycle }
+  return { summary, dailyStatuses, todayStatus, recentTransactions, cycle, totalExcludedBills }
 }

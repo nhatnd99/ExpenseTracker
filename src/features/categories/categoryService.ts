@@ -10,6 +10,7 @@ import type { BudgetCategory } from '@/types/models'
 export interface CreateCategoryInput {
   name: string
   icon?: string
+  isFixedBill?: boolean
 }
 
 export async function getAllCategories(): Promise<BudgetCategory[]> {
@@ -25,6 +26,7 @@ export async function addCategory(input: CreateCategoryInput): Promise<BudgetCat
     id: `cat-${crypto.randomUUID().slice(0, 8)}`,
     name: input.name.trim(),
     icon: input.icon?.trim() || '🏷️',
+    isFixedBill: Boolean(input.isFixedBill),
     sortOrder: maxSortOrder + 1,
     createdAt: now,
     updatedAt: now,
@@ -36,7 +38,7 @@ export async function addCategory(input: CreateCategoryInput): Promise<BudgetCat
 
 export async function updateCategory(
   id: string,
-  changes: Partial<Pick<BudgetCategory, 'name' | 'icon' | 'sortOrder'>>,
+  changes: Partial<Pick<BudgetCategory, 'name' | 'icon' | 'sortOrder' | 'isFixedBill'>>,
 ): Promise<void> {
   await categoryRepository.update(id, changes)
 }

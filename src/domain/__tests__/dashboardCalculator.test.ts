@@ -1,5 +1,12 @@
 import { describe, it, expect } from 'vitest'
-import { groupTransactionsByDate, getTopSpendingCategories, computeDailyStatuses } from '../dashboardCalculator'
+import {
+  groupTransactionsByDate,
+  getTopSpendingCategories,
+  computeDailyStatuses,
+  calculateSpentToday,
+  calculateTotalMonthlySpent,
+  calculateTotalExcludedBills,
+} from '../dashboardCalculator'
 import type { Transaction } from '@/types/models'
 
 function makeTx(overrides: Partial<Transaction>): Transaction {
@@ -15,6 +22,41 @@ function makeTx(overrides: Partial<Transaction>): Transaction {
     ...overrides,
   }
 }
+
+describe('Smart Categories calculations (calculateSpentToday, calculateTotalMonthlySpent, calculateTotalExcludedBills)', () => {
+  it('calculates spent today by excluding transactions marked as isExcludedFromDaily', () => {
+    const txs: Transaction[] = [
+      makeTx({ id: '1', date: '2024-01-15', amountVnd: 50_000, isExcludedFromDaily: false }),
+      makeTx({ id: '2', date: '2024-01-15', amountVnd: 2_000_000, isExcludedFromDaily: true }), // Rent bill
+      makeTx({ id: '3', date: '2024-01-15', amountVnd: 70_000, isExcludedFromDaily: false }),
+      makeTx({ id: '4', date: '2024-01-16', amountVnd: 100_000, isExcludedFromDaily: false }),
+    ]
+
+    const spentToday = calculateSpentToday(txs, '2024-01-15')
+    expect(spentToday).toBe(120_000) // 50k + 70k, ignoring the 2M rent bill
+  })
+
+  it('calculates total monthly spent including both daily expenses and excluded bills', () => {
+    const txs: Transaction[] = [
+      makeTx({ id: '1', amountVnd: 50_000, isExcludedFromDaily: false }),
+      makeTx({ id: '2', amountVnd: 2_000_000, isExcludedFromDaily: true }),
+      makeTx({ id: '3', amountVnd: 150_000, isExcludedFromDaily: false }),
+    ]
+
+    expect(calculateTotalMonthlySpent(txs)).toBe(2_200_000)
+  })
+
+  it('calculates total excluded bills correctly', () => {
+    const txs: Transaction[] = [
+      makeTx({ id: '1', amountVnd: 50_000, isExcludedFromDaily: false }),
+      makeTx({ id: '2', amountVnd: 2_000_000, isExcludedFromDaily: true }), // Rent
+      makeTx({ id: '3', amountVnd: 500_000, isExcludedFromDaily: true }), // Electricity
+      makeTx({ id: '4', amountVnd: 150_000 }), // undefined isExcludedFromDaily
+    ]
+
+    expect(calculateTotalExcludedBills(txs)).toBe(2_500_000)
+  })
+})
 
 describe('groupTransactionsByDate', () => {
   it('groups and sums transactions by date', () => {

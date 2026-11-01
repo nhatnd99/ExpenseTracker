@@ -86,26 +86,35 @@ export function TransactionsPage() {
     }
   }, [selectedDate, payDay])
 
-  // 1. Total spent on this selected date
-  const totalSpent = useMemo(() => {
-    return transactions.reduce((sum, tx) => sum + tx.amountVnd, 0)
+  // 1. Total spent on this selected date (EXCLUDING fixed bills / large expenses)
+  const totalDailySpent = useMemo(() => {
+    return transactions
+      .filter((tx) => !tx.isExcludedFromDaily)
+      .reduce((sum, tx) => sum + tx.amountVnd, 0)
   }, [transactions])
 
-  // 2. Remaining balance: [Hạn mức ngày] - [Tổng chi tiêu]
+  // Total excluded bills on this selected date
+  const totalExcludedBillsToday = useMemo(() => {
+    return transactions
+      .filter((tx) => Boolean(tx.isExcludedFromDaily))
+      .reduce((sum, tx) => sum + tx.amountVnd, 0)
+  }, [transactions])
+
+  // 2. Remaining balance: [Hạn mức ngày] - [Tổng chi tiêu sinh hoạt ngày]
   const remainingBalance = useMemo(() => {
-    return dailyBudget - totalSpent
-  }, [dailyBudget, totalSpent])
+    return dailyBudget - totalDailySpent
+  }, [dailyBudget, totalDailySpent])
 
   // 3. Visual warning flag: true if user spent more than the daily limit
   const isOverBudget = useMemo(() => {
     return dailyBudget > 0 && remainingBalance < 0
   }, [dailyBudget, remainingBalance])
 
-  // 4. Percentage of budget consumed
+  // 4. Percentage of daily budget consumed
   const rawSpentPercent = useMemo(() => {
     if (dailyBudget <= 0) return 0
-    return Math.round((totalSpent / dailyBudget) * 100)
-  }, [totalSpent, dailyBudget])
+    return Math.round((totalDailySpent / dailyBudget) * 100)
+  }, [totalDailySpent, dailyBudget])
 
   const progressPercent = useMemo(() => {
     if (dailyBudget <= 0) return 0
@@ -132,6 +141,7 @@ export function TransactionsPage() {
     categoryId: string
     date: string
     description?: string
+    isExcludedFromDaily?: boolean
   }) => {
     if (data.id) {
       // Update existing record
@@ -140,6 +150,7 @@ export function TransactionsPage() {
         categoryId: data.categoryId,
         date: data.date,
         description: data.description,
+        isExcludedFromDaily: data.isExcludedFromDaily,
       })
     } else {
       // Create new record
@@ -148,9 +159,10 @@ export function TransactionsPage() {
         categoryId: data.categoryId,
         date: data.date,
         description: data.description,
+        isExcludedFromDaily: data.isExcludedFromDaily,
       })
     }
-    // Refresh for the currently selected <date></date>
+    // Refresh for the currently selected date
     await reloadData(selectedDate)
   }
 
@@ -304,13 +316,13 @@ export function TransactionsPage() {
               </p>
             </div>
 
-            {/* Col 2: Total Spent (Tổng chi tiêu) */}
+            {/* Col 2: Total Spent (Tổng chi tiêu sinh hoạt ngày) */}
             <div className="text-center px-1 min-w-0">
               <span className="block text-[10px] font-bold uppercase tracking-wider text-[var(--color-text-muted)] truncate">
                 {t('transactions.totalSpent', 'Đã Tiêu')}
               </span>
               <p className="mt-1 text-sm sm:text-base font-extrabold amount-display text-[var(--color-expense)] truncate">
-                {formatVnd(totalSpent)}
+                {formatVnd(totalDailySpent)}
               </p>
             </div>
 
@@ -363,6 +375,19 @@ export function TransactionsPage() {
                   style={{ width: `${progressPercent}%` }}
                 />
               </div>
+            </div>
+          )}
+
+          {/* Excluded Bills callout if any exist today */}
+          {totalExcludedBillsToday > 0 && (
+            <div className="flex items-center justify-between text-[11px] pt-1.5 border-t border-[var(--color-border)] text-[var(--color-text-muted)]">
+              <span className="flex items-center gap-1 font-medium">
+                <Receipt className="h-3.5 w-3.5 text-[var(--color-primary)] shrink-0" />
+                <span>{t('transactions.billsToday', 'Hóa đơn đã đóng hôm nay')}:</span>
+              </span>
+              <span className="font-bold text-[var(--color-primary)] amount-display">
+                {formatVnd(totalExcludedBillsToday)}
+              </span>
             </div>
           )}
         </div>

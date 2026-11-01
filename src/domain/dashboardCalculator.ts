@@ -8,15 +8,51 @@ import { calculateDailyBudget, evaluateBudgetStatus } from './budgetCalculator'
 
 /**
  * Groups transactions by date and returns totals per day.
+ * By default excludes transactions marked as isExcludedFromDaily (fixed bills).
  */
 export function groupTransactionsByDate(
   transactions: Transaction[],
+  excludeBills: boolean = true,
 ): Map<DateString, number> {
   const map = new Map<DateString, number>()
   for (const tx of transactions) {
+    if (excludeBills && tx.isExcludedFromDaily) continue
     map.set(tx.date, (map.get(tx.date) ?? 0) + tx.amountVnd)
   }
   return map
+}
+
+/**
+ * Calculates total spent on a specific date, filtering ONLY transactions
+ * where isExcludedFromDaily === false (protecting the daily limit from large fixed bills).
+ */
+export function calculateSpentToday(
+  transactions: Transaction[],
+  date: DateString,
+): number {
+  return transactions
+    .filter((tx) => tx.date === date && !tx.isExcludedFromDaily)
+    .reduce((sum, tx) => sum + tx.amountVnd, 0)
+}
+
+/**
+ * Calculates total spent across the entire month (includes all expenses and fixed bills).
+ */
+export function calculateTotalMonthlySpent(
+  transactions: Transaction[],
+): number {
+  return transactions.reduce((sum, tx) => sum + tx.amountVnd, 0)
+}
+
+/**
+ * Calculates total of all excluded bills and large expenses (isExcludedFromDaily === true).
+ */
+export function calculateTotalExcludedBills(
+  transactions: Transaction[],
+): number {
+  return transactions
+    .filter((tx) => Boolean(tx.isExcludedFromDaily))
+    .reduce((sum, tx) => sum + tx.amountVnd, 0)
 }
 
 /**

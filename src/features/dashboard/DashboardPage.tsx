@@ -161,6 +161,17 @@ export function DashboardPage() {
               />
             </div>
           </div>
+
+          {/* Excluded Bills (Smart Categories - Large fixed bills outside daily limit) */}
+          <div className="mt-3.5 pt-2.5 border-t border-slate-800/80 flex items-center justify-between text-xs text-slate-300">
+            <span className="flex items-center gap-1.5 text-slate-400">
+              <Receipt className="h-3.5 w-3.5 text-blue-400 shrink-0" />
+              <span>{t('dashboard.totalExcludedBills', 'Tổng hóa đơn đã đóng')}:</span>
+            </span>
+            <span className="font-bold text-white amount-display">
+              {formatVnd(data.totalExcludedBills)}
+            </span>
+          </div>
         </div>
 
         {/* Today's Spending Allowance */}

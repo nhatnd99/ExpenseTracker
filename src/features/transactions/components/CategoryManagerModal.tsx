@@ -1,8 +1,8 @@
 import React, { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { X, Plus, Trash2, ArrowUp, ArrowDown } from 'lucide-react'
+import { X, Plus, Trash2, ArrowUp, ArrowDown, Receipt } from 'lucide-react'
 import type { BudgetCategory } from '@/types/models'
-import { addCategory, deleteCategory, reorderCategories } from '@/features/categories/categoryService'
+import { addCategory, updateCategory, deleteCategory, reorderCategories } from '@/features/categories/categoryService'
 import { CATEGORY_ICON_GROUPS } from '@/constants/categoryIcons'
 import { CategoryIconRenderer } from '@/components/ui/CategoryIconRenderer'
 
@@ -23,6 +23,7 @@ export const CategoryManagerModal: React.FC<CategoryManagerModalProps> = ({
   const [newName, setNewName] = useState('')
   const [selectedIcon, setSelectedIcon] = useState('Utensils')
   const [selectedGroup, setSelectedGroup] = useState<string>('food')
+  const [isFixedBill, setIsFixedBill] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
 
@@ -41,13 +42,24 @@ export const CategoryManagerModal: React.FC<CategoryManagerModalProps> = ({
       await addCategory({
         name: newName.trim(),
         icon: selectedIcon,
+        isFixedBill,
       })
       setNewName('')
+      setIsFixedBill(false)
       onCategoriesChanged()
     } catch (err) {
       setErrorMsg(err instanceof Error ? err.message : t('common.error', 'Lỗi'))
     } finally {
       setSubmitting(false)
+    }
+  }
+
+  const handleToggleFixedBill = async (id: string, current: boolean = false) => {
+    try {
+      await updateCategory(id, { isFixedBill: !current })
+      onCategoriesChanged()
+    } catch (err) {
+      alert(err instanceof Error ? err.message : t('common.error', 'Lỗi'))
     }
   }
 
@@ -184,6 +196,24 @@ export const CategoryManagerModal: React.FC<CategoryManagerModalProps> = ({
               </div>
             </div>
 
+            {/* Checkbox: Là hóa đơn/chi phí lớn (Không trừ vào Hạn mức ăn tiêu hằng ngày) */}
+            <label className="flex items-start gap-2.5 p-2.5 rounded-xl bg-[var(--color-bg-surface)] border border-[var(--color-border)] cursor-pointer select-none hover:border-[var(--color-primary)]/50 transition-colors">
+              <input
+                type="checkbox"
+                checked={isFixedBill}
+                onChange={(e) => setIsFixedBill(e.target.checked)}
+                className="mt-0.5 h-4 w-4 rounded border-[var(--color-border)] text-[var(--color-primary)] focus:ring-[var(--color-primary)] cursor-pointer accent-[var(--color-primary)] shrink-0"
+              />
+              <div className="min-w-0 flex-1">
+                <span className="text-xs font-bold text-[var(--color-text-primary)] block">
+                  {t('transactions.isFixedBillLabel', 'Là hóa đơn / chi phí lớn')}
+                </span>
+                <span className="text-[11px] text-[var(--color-text-muted)] block leading-tight">
+                  {t('transactions.isFixedBillHelp', 'Không trừ vào Hạn mức ăn tiêu hằng ngày')}
+                </span>
+              </div>
+            </label>
+
             {errorMsg && (
               <p className="text-xs text-[var(--color-expense)] font-medium">⚠️ {errorMsg}</p>
             )}
@@ -210,9 +240,28 @@ export const CategoryManagerModal: React.FC<CategoryManagerModalProps> = ({
                       <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-[var(--color-bg-subtle)] text-lg shrink-0 text-[var(--color-primary)]">
                         <CategoryIconRenderer icon={cat.icon} size={18} />
                       </span>
-                      <span className="text-sm font-semibold text-[var(--color-text-primary)] truncate">
-                        {cat.name}
-                      </span>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span className="text-sm font-semibold text-[var(--color-text-primary)] truncate">
+                            {cat.name}
+                          </span>
+                          {cat.isFixedBill && (
+                            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-[var(--color-primary-soft)] text-[var(--color-primary)] border border-[var(--color-primary)]/20 shrink-0 inline-flex items-center gap-0.5">
+                              <Receipt className="h-3 w-3" />
+                              <span>{t('transactions.fixedBillBadge', 'Hóa đơn')}</span>
+                            </span>
+                          )}
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => void handleToggleFixedBill(cat.id, cat.isFixedBill)}
+                          className="text-[10px] text-[var(--color-text-muted)] hover:text-[var(--color-primary)] hover:underline block text-left mt-0.5 cursor-pointer"
+                        >
+                          {cat.isFixedBill
+                            ? t('transactions.markAsDaily', 'Đổi sang chi tiêu ngày')
+                            : t('transactions.markAsFixedBill', 'Đổi sang hóa đơn lớn')}
+                        </button>
+                      </div>
                     </div>
 
                     <div className="flex items-center gap-0.5 shrink-0">

@@ -54,6 +54,8 @@ export interface BudgetCategory {
   name: string
   /** Optional emoji or icon identifier for display */
   icon?: string
+  /** Whether expenses in this category are fixed bills/large expenses (excluded from daily limit by default) */
+  isFixedBill?: boolean
   /** Display order */
   sortOrder: number
   createdAt: string
@@ -105,6 +107,8 @@ export interface Transaction {
   date: DateString
   /** Optional user note */
   description?: string
+  /** Whether this expense is excluded from the daily spending limit calculation (e.g. fixed bills) */
+  isExcludedFromDaily?: boolean
   status: TransactionStatus
   createdAt: string
   updatedAt: string
