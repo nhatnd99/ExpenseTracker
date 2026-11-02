@@ -122,6 +122,19 @@ export interface Transaction {
 }
 
 // ---------------------------------------------------------------------------
+// Quick Transaction Template
+// ---------------------------------------------------------------------------
+
+export interface QuickTemplate {
+  id: string
+  name: string
+  amount: number
+  categoryId: string
+  note?: string
+  type: TransactionType
+}
+
+// ---------------------------------------------------------------------------
 // Derived / View types (not persisted)
 // ---------------------------------------------------------------------------
 

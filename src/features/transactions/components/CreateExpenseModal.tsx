@@ -9,8 +9,10 @@ import { CustomNumpad } from './CustomNumpad'
 import { CategorySelector } from './CategorySelector'
 import { SmartNoteInput } from './SmartNoteInput'
 import { CategoryManagerModal } from './CategoryManagerModal'
+import { CategoryIconRenderer } from '@/components/ui/CategoryIconRenderer'
 import { useSettings } from '@/context/useSettings'
 import { formatCompactVnd } from '@/utils/currency'
+import type { QuickTemplate } from '@/types/models'
 
 export interface CreateExpenseModalProps {
   isOpen: boolean
@@ -42,7 +44,7 @@ export const CreateExpenseModal: React.FC<CreateExpenseModalProps> = ({
   onDelete,
 }) => {
   const { t } = useTranslation()
-  const { quickAmounts } = useSettings()
+  const { quickTemplates } = useSettings()
 
   // Transaction type: 'expense' by default, or loaded from existing transaction
   const [transactionType, setTransactionType] = useState<'expense' | 'income'>(
@@ -124,7 +126,7 @@ export const CreateExpenseModal: React.FC<CreateExpenseModalProps> = ({
 
   const todayStr = getTodayString()
 
-  const handleSelectQuickAmount = (amount: number) => {
+  const handleSelectTemplate = (tpl: QuickTemplate) => {
     if (typeof window !== 'undefined' && 'vibrate' in navigator) {
       try {
         navigator.vibrate(10)
@@ -132,7 +134,25 @@ export const CreateExpenseModal: React.FC<CreateExpenseModalProps> = ({
         // ignore
       }
     }
-    setRawAmount(String(amount))
+    // 1. Auto-fill Amount
+    setRawAmount(String(tpl.amount))
+
+    // 2. Auto-switch Tab (Thu/Chi) if needed
+    if (tpl.type !== transactionType) {
+      handleTypeChange(tpl.type)
+    }
+
+    // 3. Auto-select Category
+    setSelectedCategoryId(tpl.categoryId)
+
+    // 4. Auto-fill Note
+    setNote(tpl.note || '')
+
+    // 5. If category is fixed bill, auto-toggle isExcludedFromDaily
+    const cat = categories.find((c) => c.id === tpl.categoryId)
+    if (tpl.type === 'expense') {
+      setIsExcludedFromDaily(Boolean(cat?.isFixedBill))
+    }
   }
 
   const handleSubmit = async () => {
@@ -416,18 +436,23 @@ export const CreateExpenseModal: React.FC<CreateExpenseModalProps> = ({
 
           {/* 3. Bottom Footer - Numpad (Fixed at bottom - shrink-0) with Safe-Area Padding */}
           <div className="shrink-0 w-full bg-gray-900 border-t border-gray-800 p-2 pb-[max(0.5rem,env(safe-area-inset-bottom,0px))]">
-            {/* Quick Amount Chips */}
-            {quickAmounts && quickAmounts.length > 0 && (
+            {/* Quick Transaction Templates Chips */}
+            {quickTemplates && quickTemplates.length > 0 && (
               <div className="flex flex-row overflow-x-auto gap-2 py-1 px-0.5 mb-1.5 scrollbar-hide snap-x no-scrollbar items-center">
-                {quickAmounts.map((amt) => {
-                  const isActive = numericAmount === amt
+                {quickTemplates.map((tpl) => {
+                  const cat = categories.find((c) => c.id === tpl.categoryId)
+                  const isActive =
+                    numericAmount === tpl.amount &&
+                    activeCategoryId === tpl.categoryId &&
+                    transactionType === tpl.type
+
                   return (
                     <button
-                      key={amt}
+                      key={tpl.id}
                       type="button"
-                      onClick={() => handleSelectQuickAmount(amt)}
-                      className={`snap-start shrink-0 px-3.5 py-1 rounded-full text-xs font-bold transition-all active:scale-95 cursor-pointer select-none ${
-                        transactionType === 'income'
+                      onClick={() => handleSelectTemplate(tpl)}
+                      className={`snap-start shrink-0 inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold transition-all active:scale-95 cursor-pointer select-none ${
+                        tpl.type === 'income'
                           ? isActive
                             ? 'bg-emerald-600 text-white border border-emerald-400 shadow-md ring-2 ring-emerald-500/40'
                             : 'bg-gray-800 text-emerald-300 border border-emerald-500/30 hover:border-emerald-400 hover:text-white'
@@ -435,10 +460,15 @@ export const CreateExpenseModal: React.FC<CreateExpenseModalProps> = ({
                             ? 'bg-rose-600 text-white border border-rose-400 shadow-md ring-2 ring-rose-500/40'
                             : 'bg-gray-800 text-rose-300 border border-rose-500/30 hover:border-rose-400 hover:text-white'
                       }`}
-                      aria-label={`${amt} VND`}
+                      aria-label={`${tpl.name} - ${tpl.amount} VND`}
                       aria-pressed={isActive}
+                      title={`${tpl.name}: ${tpl.amount.toLocaleString('vi-VN')} ₫${cat?.name ? ` (${cat.name})` : ''}`}
                     >
-                      {formatCompactVnd(amt)}
+                      <CategoryIconRenderer icon={cat?.icon} size={13} className="shrink-0" />
+                      <span className="truncate max-w-[110px]">{tpl.name}</span>
+                      <span className="font-mono text-[10px] opacity-80 shrink-0">
+                        {formatCompactVnd(tpl.amount)}
+                      </span>
                     </button>
                   )
                 })}

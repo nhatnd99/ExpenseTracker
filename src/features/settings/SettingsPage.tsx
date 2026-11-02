@@ -13,14 +13,12 @@ import {
   Lock,
   Settings2,
   AlertTriangle,
-  Zap,
-  X,
+  Pencil,
+  Sparkles,
 } from 'lucide-react'
-import {
-  formatCurrencyDisplay,
-  parseCurrencyToNumber,
-  formatCompactVnd,
-} from '@/utils/currency'
+import type { QuickTemplate, BudgetCategory } from '@/types/models'
+import { ManageQuickTemplateModal } from './components/ManageQuickTemplateModal'
+import { formatCurrencyDisplay } from '@/utils/currency'
 import { db } from '@/db/database'
 import { PageContainer } from '@/components/layout/PageContainer'
 import { useSettings } from '@/context/useSettings'
@@ -54,9 +52,10 @@ export function SettingsPage() {
     payDay,
     setPayDay,
     refreshDailyLimit,
-    quickAmounts,
-    addQuickAmount,
-    removeQuickAmount,
+    quickTemplates,
+    addQuickTemplate,
+    updateQuickTemplate,
+    deleteQuickTemplate,
   } = useSettings()
   const todayStr = useMemo(() => getTodayString(), [])
   const currentCycleMonth = useMemo(() => getCycleMonthForDate(todayStr, payDay), [todayStr, payDay])
@@ -66,33 +65,42 @@ export function SettingsPage() {
   const [budgetSaveSuccess, setBudgetSaveSuccess] = useState<boolean>(false)
   const [budgetErrorMsg, setBudgetErrorMsg] = useState<string | null>(null)
 
-  // Quick amounts input state
-  const [newQuickAmountRaw, setNewQuickAmountRaw] = useState<string>('')
-  const [quickAmountError, setQuickAmountError] = useState<string | null>(null)
+  // Quick Templates Modal & Categories State
+  const [isTemplateModalOpen, setIsTemplateModalOpen] = useState(false)
+  const [editingTemplate, setEditingTemplate] = useState<QuickTemplate | null>(null)
+  const [allCategories, setAllCategories] = useState<BudgetCategory[]>([])
 
-  const handleNewQuickAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const raw = e.target.value.replace(/\D/g, '')
-    setNewQuickAmountRaw(raw)
-    setQuickAmountError(null)
+  useEffect(() => {
+    let active = true
+    categoryRepository.findAll().then((cats) => {
+      if (active) setAllCategories(cats)
+    }).catch(() => {})
+    return () => {
+      active = false
+    }
+  }, [])
+
+  const handleOpenAddTemplate = () => {
+    setEditingTemplate(null)
+    setIsTemplateModalOpen(true)
   }
 
-  const handleAddQuickAmount = (e: React.FormEvent) => {
-    e.preventDefault()
-    const amount = parseCurrencyToNumber(newQuickAmountRaw)
-    if (!amount || amount <= 0) {
-      setQuickAmountError(t('settings.quickAmountInvalid', 'Vui lòng nhập số tiền hợp lệ lớn hơn 0.'))
-      return
-    }
-    if (quickAmounts.includes(amount)) {
-      setQuickAmountError(t('settings.quickAmountDuplicate', 'Số tiền này đã tồn tại trong danh sách phím tắt.'))
-      return
-    }
-    const success = addQuickAmount(amount)
-    if (success) {
-      setNewQuickAmountRaw('')
-      setQuickAmountError(null)
+  const handleOpenEditTemplate = (tpl: QuickTemplate) => {
+    setEditingTemplate(tpl)
+    setIsTemplateModalOpen(true)
+  }
+
+  const handleSaveTemplate = (data: Omit<QuickTemplate, 'id'>, id?: string) => {
+    if (id) {
+      updateQuickTemplate(id, data)
     } else {
-      setQuickAmountError(t('settings.quickAmountDuplicate', 'Số tiền này đã tồn tại trong danh sách phím tắt.'))
+      addQuickTemplate(data)
+    }
+  }
+
+  const handleDeleteTemplate = (id: string) => {
+    if (confirm(t('settings.confirmDeleteTemplate', 'Bạn có chắc chắn muốn xóa biểu mẫu nhanh này?'))) {
+      deleteQuickTemplate(id)
     }
   }
 
@@ -802,101 +810,143 @@ export function SettingsPage() {
         </div>
 
         {/* ========================================================
-            SECTION 3: Quick Amounts (Phím tắt số tiền)
+            SECTION 3: Manage Quick Templates (Quản lý biểu mẫu nhanh)
             ======================================================== */}
         <div className="rounded-3xl border border-[var(--color-border)] bg-[var(--color-bg-surface)] p-4 sm:p-5 shadow-2xs space-y-4 transition-colors box-border">
           {/* Header */}
-          <div className="flex items-center gap-2.5 border-b border-[var(--color-border)] pb-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-2xl bg-amber-500/10 text-amber-600 dark:text-amber-400 shrink-0">
-              <Zap className="h-4.5 w-4.5" />
-            </div>
-            <div className="min-w-0 flex-1">
-              <h2 className="text-sm font-bold text-[var(--color-text-primary)] leading-tight">
-                {t('settings.quickAmountsTitle', 'Phím Tắt Số Tiền')}
-              </h2>
-              <p className="text-xs text-[var(--color-text-muted)] truncate">
-                {t('settings.quickAmountsDesc', 'Thiết lập các mức tiền hay dùng để nhập nhanh khi ghi chép')}
-              </p>
-            </div>
-          </div>
-
-          {/* Current Chips list */}
-          <div className="space-y-2">
-            <span className="block text-[11px] font-bold uppercase tracking-wider text-[var(--color-text-secondary)]">
-              {t('settings.quickAmountsCurrentList', 'Danh sách phím tắt hiện có')} ({quickAmounts.length})
-            </span>
-
-            {quickAmounts.length === 0 ? (
-              <p className="text-xs text-[var(--color-text-muted)] italic py-2">
-                {t('settings.quickAmountsEmpty', 'Chưa có phím tắt số tiền nào. Hãy thêm số tiền bên dưới.')}
-              </p>
-            ) : (
-              <div className="flex flex-wrap gap-2 pt-0.5">
-                {quickAmounts.map((amt) => (
-                  <div
-                    key={amt}
-                    className="inline-flex items-center gap-1.5 pl-3 pr-1.5 py-1 rounded-full text-xs font-bold bg-[var(--color-bg-subtle)] border border-[var(--color-border)] text-[var(--color-text-primary)] shadow-2xs transition-all hover:border-[var(--color-border-focused)]"
-                  >
-                    <span>{formatCurrencyDisplay(String(amt))} ₫</span>
-                    <span className="text-[10px] text-[var(--color-text-muted)] font-mono">
-                      ({formatCompactVnd(amt)})
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => removeQuickAmount(amt)}
-                      className="flex h-5 w-5 items-center justify-center rounded-full hover:bg-rose-500/15 text-[var(--color-text-muted)] hover:text-rose-600 dark:hover:text-rose-400 transition-colors cursor-pointer"
-                      aria-label={t('settings.deleteQuickAmountAria', 'Xóa phím tắt {{amount}}', {
-                        amount: formatVnd(amt),
-                      })}
-                      title={t('common.delete', 'Xóa')}
-                    >
-                      <X className="h-3.5 w-3.5" />
-                    </button>
-                  </div>
-                ))}
+          <div className="flex items-center justify-between gap-2.5 border-b border-[var(--color-border)] pb-3">
+            <div className="flex items-center gap-2.5 min-w-0 flex-1">
+              <div className="flex h-9 w-9 items-center justify-center rounded-2xl bg-amber-500/10 text-amber-600 dark:text-amber-400 shrink-0">
+                <Sparkles className="h-4.5 w-4.5" />
               </div>
-            )}
-          </div>
+              <div className="min-w-0 flex-1">
+                <h2 className="text-sm font-bold text-[var(--color-text-primary)] leading-tight">
+                  {t('settings.manageTemplatesTitle', 'Quản lý biểu mẫu nhanh')}
+                </h2>
+                <p className="text-xs text-[var(--color-text-muted)] truncate">
+                  {t('settings.manageTemplatesDesc', 'Cấu hình sẵn các biểu mẫu giao dịch hay dùng để tự động điền khi ghi chép')}
+                </p>
+              </div>
+            </div>
 
-          {/* Add New Quick Amount Input Form */}
-          <form onSubmit={handleAddQuickAmount} className="space-y-2 pt-1 border-t border-[var(--color-border)]">
-            <label
-              htmlFor="new-quick-amount-input"
-              className="block text-[11px] font-bold uppercase tracking-wider text-[var(--color-text-secondary)]"
+            <button
+              type="button"
+              onClick={handleOpenAddTemplate}
+              className="py-1.5 px-3 rounded-xl bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] active:scale-95 text-white text-xs font-bold shadow-xs cursor-pointer transition-all flex items-center gap-1.5 shrink-0"
             >
-              {t('settings.addQuickAmountLabel', 'Thêm phím tắt mới')}
-            </label>
-            <div className="flex items-center gap-2">
-              <div className="relative flex-1 min-w-0">
-                <input
-                  id="new-quick-amount-input"
-                  type="text"
-                  inputMode="numeric"
-                  value={newQuickAmountRaw ? formatCurrencyDisplay(newQuickAmountRaw) : ''}
-                  onChange={handleNewQuickAmountChange}
-                  placeholder={t('settings.addQuickAmountPlaceholder', 'Nhập số tiền (VD: 50,000)')}
-                  className="w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-bg-subtle)] pl-3 pr-12 py-2 text-xs font-bold text-[var(--color-text-primary)] placeholder-[var(--color-text-muted)] focus:bg-[var(--color-bg-surface)] focus:border-[var(--color-border-focused)] focus:outline-none transition-colors"
-                />
-                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-[var(--color-text-muted)]">
-                  ₫
-                </span>
-              </div>
-              <button
-                type="submit"
-                disabled={!newQuickAmountRaw || parseCurrencyToNumber(newQuickAmountRaw) <= 0}
-                className="shrink-0 py-2 px-3.5 rounded-xl bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] active:scale-95 text-xs font-bold text-white shadow-xs disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-all flex items-center gap-1.5"
-              >
-                <Plus className="h-3.5 w-3.5" />
-                <span>{t('settings.addQuickAmountBtn', 'Thêm')}</span>
-              </button>
+              <Plus className="h-3.5 w-3.5" />
+              <span>{t('settings.addTemplateBtn', 'Thêm biểu mẫu')}</span>
+            </button>
+          </div>
+
+          {/* Current Templates List */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="block text-[11px] font-bold uppercase tracking-wider text-[var(--color-text-secondary)]">
+                {t('settings.templatesListLabel', 'Danh sách biểu mẫu')} ({quickTemplates.length})
+              </span>
             </div>
 
-            {quickAmountError && (
-              <p className="text-xs text-rose-500 font-medium">
-                ⚠️ {quickAmountError}
-              </p>
+            {quickTemplates.length === 0 ? (
+              <div className="text-center py-6 space-y-2 border border-dashed border-[var(--color-border)] rounded-2xl p-4">
+                <p className="text-xs text-[var(--color-text-muted)] italic">
+                  {t('settings.noTemplates', 'Chưa có biểu mẫu nào. Hãy bấm "Thêm biểu mẫu" để tạo mới.')}
+                </p>
+                <button
+                  type="button"
+                  onClick={handleOpenAddTemplate}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-[var(--color-border)] bg-[var(--color-bg-subtle)] hover:bg-[var(--color-bg-surface)] text-xs font-semibold text-[var(--color-primary)] cursor-pointer transition-colors"
+                >
+                  <Plus className="h-3 w-3" />
+                  <span>{t('settings.addTemplateBtn', 'Thêm biểu mẫu')}</span>
+                </button>
+              </div>
+            ) : (
+              <div className="space-y-2 pt-0.5">
+                {quickTemplates.map((tpl) => {
+                  const cat = allCategories.find((c) => c.id === tpl.categoryId)
+                  return (
+                    <div
+                      key={tpl.id}
+                      className="flex items-center justify-between gap-3 p-3 rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg-subtle)] hover:bg-[var(--color-bg-surface)] transition-all shadow-2xs box-border"
+                    >
+                      {/* Left: Icon & Info */}
+                      <div className="flex items-center gap-3 min-w-0 flex-1">
+                        <div
+                          className={`flex h-10 w-10 items-center justify-center rounded-xl shrink-0 ${
+                            tpl.type === 'income'
+                              ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
+                              : 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20'
+                          }`}
+                        >
+                          <CategoryIconRenderer icon={cat?.icon} size={18} />
+                        </div>
+
+                        <div className="min-w-0 flex-1 space-y-0.5">
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span className="text-xs font-bold text-[var(--color-text-primary)] truncate">
+                              {tpl.name}
+                            </span>
+                            <span
+                              className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
+                                tpl.type === 'income'
+                                  ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400'
+                                  : 'bg-rose-500/15 text-rose-600 dark:text-rose-400'
+                              }`}
+                            >
+                              {tpl.type === 'income' ? t('transactions.typeIncome', 'Thu') : t('transactions.typeExpense', 'Chi')}
+                            </span>
+                          </div>
+
+                          <div className="flex items-center gap-1.5 text-[11px] text-[var(--color-text-muted)] truncate">
+                            <span>{cat?.name || t('transactions.categories', 'Danh mục')}</span>
+                            {tpl.note && (
+                              <>
+                                <span>•</span>
+                                <span className="truncate italic">"{tpl.note}"</span>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Right: Amount & Actions */}
+                      <div className="flex items-center gap-2 shrink-0">
+                        <span
+                          className={`text-xs sm:text-sm font-extrabold amount-display ${
+                            tpl.type === 'income' ? 'text-emerald-600 dark:text-emerald-400' : 'text-[var(--color-text-primary)]'
+                          }`}
+                        >
+                          {tpl.type === 'income' ? '+' : '-'}{formatCurrencyDisplay(String(tpl.amount))} ₫
+                        </span>
+
+                        <div className="flex items-center gap-0.5">
+                          <button
+                            type="button"
+                            onClick={() => handleOpenEditTemplate(tpl)}
+                            className="flex h-7 w-7 items-center justify-center rounded-lg text-[var(--color-text-muted)] hover:bg-[var(--color-bg-surface)] hover:text-[var(--color-text-primary)] border border-transparent hover:border-[var(--color-border)] transition-colors cursor-pointer"
+                            title={t('common.edit', 'Sửa')}
+                            aria-label={t('common.edit', 'Sửa')}
+                          >
+                            <Pencil className="h-3.5 w-3.5" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteTemplate(tpl.id)}
+                            className="flex h-7 w-7 items-center justify-center rounded-lg text-[var(--color-text-muted)] hover:bg-rose-500/10 hover:text-rose-600 dark:hover:text-rose-400 border border-transparent hover:border-rose-500/20 transition-colors cursor-pointer"
+                            title={t('common.delete', 'Xóa')}
+                            aria-label={t('common.delete', 'Xóa')}
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
             )}
-          </form>
+          </div>
         </div>
 
         {/* ===================================================
@@ -979,6 +1029,15 @@ export function SettingsPage() {
         bills={fixedBills}
         onSaveBills={handleSaveFixedBills}
         monthlyIncome={income}
+      />
+
+      {/* Manage Quick Templates Modal */}
+      <ManageQuickTemplateModal
+        isOpen={isTemplateModalOpen}
+        onClose={() => setIsTemplateModalOpen(false)}
+        initialTemplate={editingTemplate}
+        categories={allCategories}
+        onSave={handleSaveTemplate}
       />
     </PageContainer>
   )
