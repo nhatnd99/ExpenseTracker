@@ -40,11 +40,6 @@ import { PercentageInput } from './components/PercentageInput'
 import { ManageFixedBillsModal } from './components/ManageFixedBillsModal'
 import type { FixedBillItem } from './types'
 
-const DEFAULT_FIXED_BILLS: FixedBillItem[] = [
-  { id: 'fb-1', name: 'Tiền nhà', amountVnd: 3_000_000 },
-  { id: 'fb-2', name: 'Điện, nước, Wifi', amountVnd: 500_000 },
-]
-
 export function SettingsPage() {
   const { t } = useTranslation()
   const {
@@ -52,6 +47,8 @@ export function SettingsPage() {
     setPayDay,
     refreshDailyLimit,
     quickTemplates,
+    fixedBills,
+    setFixedBills,
   } = useSettings()
   const todayStr = useMemo(() => getTodayString(), [])
   const currentCycleMonth = useMemo(() => getCycleMonthForDate(todayStr, payDay), [todayStr, payDay])
@@ -78,9 +75,8 @@ export function SettingsPage() {
   // Monthly income
   const [income, setIncome] = useState<number>(10_000_000)
 
-  // Fixed Bills Modal & State
+  // Fixed Bills Modal State
   const [isFixedBillsModalOpen, setIsFixedBillsModalOpen] = useState(false)
-  const [fixedBills, setFixedBills] = useState<FixedBillItem[]>(DEFAULT_FIXED_BILLS)
 
   // Danger Zone - Reset All Data State
   const [isResetModalOpen, setIsResetModalOpen] = useState(false)
@@ -155,18 +151,17 @@ export function SettingsPage() {
       .then((data: PlanWithDetails) => {
         if (!active) return
 
-        // 1. Load fixed bills from localStorage for this month (fallback to default template)
+        // 1. Load fixed bills from localStorage (check month override, fallback to global default)
         try {
-          const stored =
-            localStorage.getItem(`budget_fixed_bills_${currentCycleMonth}`) ||
-            localStorage.getItem('budget_fixed_bills_default')
-          if (stored) {
-            setFixedBills(JSON.parse(stored) as FixedBillItem[])
-          } else {
-            setFixedBills(DEFAULT_FIXED_BILLS)
+          const storedMonth = localStorage.getItem(`budget_fixed_bills_${currentCycleMonth}`)
+          if (storedMonth) {
+            const parsed = JSON.parse(storedMonth) as FixedBillItem[]
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              setFixedBills(parsed)
+            }
           }
         } catch {
-          setFixedBills(DEFAULT_FIXED_BILLS)
+          // keep current global fixedBills
         }
 
         // 2. Initialize Income & Percentages
@@ -212,7 +207,7 @@ export function SettingsPage() {
     return () => {
       active = false
     }
-  }, [currentCycleMonth, t, initializeFromPlan])
+  }, [currentCycleMonth, t, initializeFromPlan, setFixedBills])
 
   // Formatted income input display
   const formattedIncome = useMemo(() => {
@@ -919,13 +914,15 @@ export function SettingsPage() {
       )}
 
       {/* Manage Fixed Bills Modal */}
-      <ManageFixedBillsModal
-        isOpen={isFixedBillsModalOpen}
-        onClose={() => setIsFixedBillsModalOpen(false)}
-        bills={fixedBills}
-        onSaveBills={handleSaveFixedBills}
-        monthlyIncome={income}
-      />
+      {isFixedBillsModalOpen && (
+        <ManageFixedBillsModal
+          isOpen={isFixedBillsModalOpen}
+          onClose={() => setIsFixedBillsModalOpen(false)}
+          bills={fixedBills}
+          onSaveBills={handleSaveFixedBills}
+          monthlyIncome={income}
+        />
+      )}
 
       {/* Manage Quick Templates Modal */}
       <ManageQuickTemplateModal

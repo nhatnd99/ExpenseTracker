@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import {
   Wallet,
+  WalletCards,
   PlusCircle,
   SlidersHorizontal,
   ArrowRight,
@@ -70,8 +71,8 @@ export function DashboardPage() {
       <PageContainer title={t('app.dashboard')}>
         <div className="space-y-4">
           <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-slate-900 via-blue-950 to-slate-900 p-6 text-white shadow-xl border border-[var(--color-border)]">
-            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/10 backdrop-blur-md text-[var(--color-primary)] mb-4">
-              <Sparkles className="h-6 w-6" />
+            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-tr from-blue-600 via-indigo-600 to-cyan-500 text-white shadow-lg shadow-blue-500/30 ring-2 ring-white/10 mb-4">
+              <WalletCards className="h-7 w-7 stroke-[2.25]" />
             </div>
             <h2 className="text-xl font-bold tracking-tight">{t('dashboard.welcomeTitle')}</h2>
             <p className="mt-2 text-sm text-slate-300 leading-relaxed">

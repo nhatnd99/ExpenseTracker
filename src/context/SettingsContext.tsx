@@ -4,10 +4,13 @@ import {
   PAYDAY_STORAGE_KEY,
   QUICK_AMOUNTS_STORAGE_KEY,
   QUICK_TEMPLATES_STORAGE_KEY,
+  FIXED_BILLS_STORAGE_KEY,
   DEFAULT_QUICK_AMOUNTS,
   DEFAULT_QUICK_TEMPLATES,
+  DEFAULT_FIXED_BILLS,
 } from './settings-context'
 import type { QuickTemplate } from '@/types/models'
+import type { FixedBillItem } from '@/features/settings/types'
 import { formatCompactVnd } from '@/utils/currency'
 import { getActiveDailyLimit } from '@/features/monthly-plans/monthlyPlanService'
 
@@ -217,6 +220,31 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     }
   }, [])
 
+  // Fixed Bills Global State
+  const [fixedBills, setFixedBillsState] = useState<FixedBillItem[]>(() => {
+    try {
+      const stored = localStorage.getItem(FIXED_BILLS_STORAGE_KEY)
+      if (stored) {
+        const parsed = JSON.parse(stored)
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed as FixedBillItem[]
+        }
+      }
+    } catch {
+      // ignore
+    }
+    return DEFAULT_FIXED_BILLS
+  })
+
+  const setFixedBills = useCallback((bills: FixedBillItem[]) => {
+    setFixedBillsState(bills)
+    try {
+      localStorage.setItem(FIXED_BILLS_STORAGE_KEY, JSON.stringify(bills))
+    } catch {
+      // ignore
+    }
+  }, [])
+
   const refreshDailyLimit = useCallback(async (): Promise<number> => {
     try {
       const limit = await getActiveDailyLimit(payDay)
@@ -268,6 +296,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         updateQuickTemplate,
         deleteQuickTemplate,
         setQuickTemplates,
+        fixedBills,
+        setFixedBills,
       }}
     >
       {children}

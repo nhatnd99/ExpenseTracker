@@ -1,4 +1,24 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" fill="none">
-  <rect width="32" height="32" rx="8" fill="#0f172a"/>
-  <text x="16" y="22" font-family="serif" font-size="18" font-weight="bold" fill="#22d3ee" text-anchor="middle">₫</text>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none">
+  <defs>
+    <linearGradient id="brandGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#2563eb" />
+      <stop offset="50%" stop-color="#4f46e5" />
+      <stop offset="100%" stop-color="#06b6d4" />
+    </linearGradient>
+    <linearGradient id="cardGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#38bdf8" />
+      <stop offset="100%" stop-color="#818cf8" />
+    </linearGradient>
+  </defs>
+  <!-- Rounded Squircle Background -->
+  <rect width="512" height="512" rx="128" fill="url(#brandGrad)" />
+  <!-- Card in background -->
+  <rect x="136" y="116" width="240" height="150" rx="22" fill="url(#cardGrad)" opacity="0.95" />
+  <rect x="164" y="144" width="56" height="38" rx="8" fill="#ffffff" opacity="0.9" />
+  <!-- Wallet Body -->
+  <rect x="96" y="180" width="320" height="220" rx="38" fill="#ffffff" />
+  <rect x="96" y="214" width="320" height="42" fill="#f1f5f9" />
+  <!-- Wallet Flap & Gold Coin/Clasp -->
+  <path d="M280 238 H388 C406 238 420 252 420 270 C420 288 406 302 388 302 H280 C262 302 248 288 248 270 C248 252 262 238 280 238 Z" fill="#2563eb" />
+  <circle cx="366" cy="270" r="15" fill="#fbbf24" stroke="#ffffff" stroke-width="4" />
 </svg>

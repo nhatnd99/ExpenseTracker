@@ -1,5 +1,6 @@
 import { createContext } from 'react'
 import type { QuickTemplate } from '@/types/models'
+import type { FixedBillItem } from '@/features/settings/types'
 
 export interface SettingsContextType {
   payDay: number
@@ -16,13 +17,22 @@ export interface SettingsContextType {
   updateQuickTemplate: (id: string, updates: Partial<Omit<QuickTemplate, 'id'>>) => boolean
   deleteQuickTemplate: (id: string) => void
   setQuickTemplates: (templates: QuickTemplate[]) => void
+  // Fixed Bills
+  fixedBills: FixedBillItem[]
+  setFixedBills: (bills: FixedBillItem[]) => void
 }
 
 export const PAYDAY_STORAGE_KEY = 'expense_tracker_payday'
 export const QUICK_AMOUNTS_STORAGE_KEY = 'expense_tracker_quick_amounts'
 export const QUICK_TEMPLATES_STORAGE_KEY = 'expense_tracker_quick_templates'
+export const FIXED_BILLS_STORAGE_KEY = 'budget_fixed_bills_default'
 export const DEFAULT_QUICK_AMOUNTS: number[] = [25000, 30000, 50000, 100000]
 export const MAX_QUICK_AMOUNTS = 6
+
+export const DEFAULT_FIXED_BILLS: FixedBillItem[] = [
+  { id: 'fb-1', name: 'Tiền nhà', amountVnd: 3_000_000 },
+  { id: 'fb-2', name: 'Điện, nước, Wifi', amountVnd: 500_000 },
+]
 
 export const DEFAULT_QUICK_TEMPLATES: QuickTemplate[] = [
   {

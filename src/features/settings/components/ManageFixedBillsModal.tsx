@@ -12,8 +12,14 @@ export interface ManageFixedBillsModalProps {
   monthlyIncome: number
 }
 
-export const ManageFixedBillsModal: React.FC<ManageFixedBillsModalProps> = ({
-  isOpen,
+interface ManageFixedBillsDialogProps {
+  onClose: () => void
+  bills: FixedBillItem[]
+  onSaveBills: (newBills: FixedBillItem[]) => void
+  monthlyIncome: number
+}
+
+const ManageFixedBillsDialog: React.FC<ManageFixedBillsDialogProps> = ({
   onClose,
   bills,
   onSaveBills,
@@ -28,8 +34,6 @@ export const ManageFixedBillsModal: React.FC<ManageFixedBillsModalProps> = ({
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editName, setEditName] = useState('')
   const [editAmount, setEditAmount] = useState('')
-
-  if (!isOpen) return null
 
   // Total amount of current items in modal
   const totalAmount = items.reduce((sum, b) => sum + (Number(b.amountVnd) || 0), 0)
@@ -80,6 +84,22 @@ export const ManageFixedBillsModal: React.FC<ManageFixedBillsModalProps> = ({
 
   const handleCancelEdit = () => {
     setEditingId(null)
+  }
+
+  const handleApplyAndClose = (e?: React.MouseEvent) => {
+    if (e) e.preventDefault()
+    let finalItems = [...items]
+    if (editingId && editName.trim()) {
+      const rawAmt = editAmount.replace(/\D/g, '')
+      const amt = rawAmt ? parseInt(rawAmt, 10) : 0
+      if (amt > 0) {
+        finalItems = finalItems.map((b) =>
+          b.id === editingId ? { ...b, name: editName.trim(), amountVnd: amt } : b
+        )
+      }
+    }
+    onSaveBills(finalItems)
+    onClose()
   }
 
   return (
@@ -206,6 +226,14 @@ export const ManageFixedBillsModal: React.FC<ManageFixedBillsModalProps> = ({
                             type="text"
                             value={editName}
                             onChange={(e) => setEditName(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') {
+                                e.preventDefault()
+                                handleSaveEdit(item.id)
+                              } else if (e.key === 'Escape') {
+                                handleCancelEdit()
+                              }
+                            }}
                             className="min-w-0 flex-1 rounded-lg border border-[var(--color-border-focused)] bg-[var(--color-bg-surface)] px-2 py-1 text-xs text-[var(--color-text-primary)] focus:outline-none"
                           />
                           <input
@@ -217,6 +245,14 @@ export const ManageFixedBillsModal: React.FC<ManageFixedBillsModalProps> = ({
                                 : ''
                             }
                             onChange={(e) => setEditAmount(e.target.value.replace(/\D/g, ''))}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') {
+                                e.preventDefault()
+                                handleSaveEdit(item.id)
+                              } else if (e.key === 'Escape') {
+                                handleCancelEdit()
+                              }
+                            }}
                             className="w-24 rounded-lg border border-[var(--color-border-focused)] bg-[var(--color-bg-surface)] px-2 py-1 text-xs font-bold text-[var(--color-text-primary)] text-right focus:outline-none"
                           />
                           <button
@@ -279,14 +315,33 @@ export const ManageFixedBillsModal: React.FC<ManageFixedBillsModalProps> = ({
         <div className="shrink-0 pt-2 border-t border-[var(--color-border)] mt-1">
           <button
             type="button"
-            onClick={onClose}
-            className="w-full rounded-2xl bg-[var(--color-primary)] py-3 text-xs font-bold text-white hover:bg-[var(--color-primary-hover)] cursor-pointer transition-colors"
+            onClick={handleApplyAndClose}
+            className="w-full rounded-2xl bg-[var(--color-primary)] py-3 text-xs font-bold text-white hover:bg-[var(--color-primary-hover)] active:scale-[0.99] cursor-pointer transition-colors"
           >
             {t('common.save', 'Xong & Áp Dụng')}
           </button>
         </div>
       </div>
     </div>
+  )
+}
+
+export const ManageFixedBillsModal: React.FC<ManageFixedBillsModalProps> = ({
+  isOpen,
+  onClose,
+  bills,
+  onSaveBills,
+  monthlyIncome,
+}) => {
+  if (!isOpen) return null
+
+  return (
+    <ManageFixedBillsDialog
+      onClose={onClose}
+      bills={bills}
+      onSaveBills={onSaveBills}
+      monthlyIncome={monthlyIncome}
+    />
   )
 }
 

@@ -7,6 +7,8 @@ import {
   QUICK_AMOUNTS_STORAGE_KEY,
   DEFAULT_QUICK_AMOUNTS,
   DEFAULT_QUICK_TEMPLATES,
+  DEFAULT_FIXED_BILLS,
+  FIXED_BILLS_STORAGE_KEY,
 } from '../settings-context'
 
 describe('SettingsContext Quick Amounts & Templates', () => {
@@ -174,5 +176,24 @@ describe('SettingsContext Quick Amounts & Templates', () => {
     })
 
     expect(result.current.quickAmounts).toEqual([100000, 200000, 500000])
+  })
+
+  it('initializes with default fixed bills and persists changes to localStorage', async () => {
+    const { result } = renderHook(() => useSettings(), { wrapper })
+    expect(result.current.fixedBills).toEqual(DEFAULT_FIXED_BILLS)
+
+    const updatedBills = [
+      { id: 'fb-new-1', name: 'Tiền nhà mới', amountVnd: 4000000 },
+      { id: 'fb-new-2', name: 'Internet cáp quang', amountVnd: 300000 },
+    ]
+
+    await act(async () => {
+      result.current.setFixedBills(updatedBills)
+    })
+
+    expect(result.current.fixedBills).toEqual(updatedBills)
+    const stored = localStorage.getItem(FIXED_BILLS_STORAGE_KEY)
+    expect(stored).toBeDefined()
+    expect(JSON.parse(stored!)).toEqual(updatedBills)
   })
 })
