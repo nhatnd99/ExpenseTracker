@@ -20,13 +20,21 @@ export interface SettingsContextType {
   // Fixed Bills
   fixedBills: FixedBillItem[]
   setFixedBills: (bills: FixedBillItem[]) => void
+  // Monthly Income & Budget Plan Persistence
+  monthlyIncome: number
+  setMonthlyIncome: (income: number) => void
+  budgetPlan: unknown
+  setBudgetPlan: (plan: unknown) => void
 }
 
 export const PAYDAY_STORAGE_KEY = 'expense_tracker_payday'
 export const QUICK_AMOUNTS_STORAGE_KEY = 'expense_tracker_quick_amounts'
 export const QUICK_TEMPLATES_STORAGE_KEY = 'expense_tracker_quick_templates'
 export const FIXED_BILLS_STORAGE_KEY = 'budget_fixed_bills_default'
+export const MONTHLY_INCOME_STORAGE_KEY = 'expense_tracker_monthly_income'
+export const BUDGET_PLAN_STORAGE_KEY = 'expense_tracker_budget_plan'
 export const DEFAULT_QUICK_AMOUNTS: number[] = [25000, 30000, 50000, 100000]
+export const DEFAULT_MONTHLY_INCOME = 10_000_000
 export const MAX_QUICK_AMOUNTS = 6
 
 export const DEFAULT_FIXED_BILLS: FixedBillItem[] = [

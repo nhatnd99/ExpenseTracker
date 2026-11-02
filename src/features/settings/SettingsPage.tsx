@@ -49,6 +49,9 @@ export function SettingsPage() {
     quickTemplates,
     fixedBills,
     setFixedBills,
+    monthlyIncome,
+    setMonthlyIncome,
+    setBudgetPlan,
   } = useSettings()
   const todayStr = useMemo(() => getTodayString(), [])
   const currentCycleMonth = useMemo(() => getCycleMonthForDate(todayStr, payDay), [todayStr, payDay])
@@ -72,8 +75,8 @@ export function SettingsPage() {
     }
   }, [])
 
-  // Monthly income
-  const [income, setIncome] = useState<number>(10_000_000)
+  // Monthly income initialized from persistent SettingsContext
+  const [income, setIncome] = useState<number>(monthlyIncome || 10_000_000)
 
   // Fixed Bills Modal State
   const [isFixedBillsModalOpen, setIsFixedBillsModalOpen] = useState(false)
@@ -168,6 +171,8 @@ export function SettingsPage() {
         if (data.plan && data.allocations.length > 0) {
           const inc = data.plan.incomeVnd
           setIncome(inc)
+          setMonthlyIncome(inc)
+          setBudgetPlan(data.plan)
 
           const dailyAlloc = data.allocations.find((a) => a.categoryId === 'cat-expenses')
           const savingsAlloc = data.allocations.find((a) => a.categoryId === 'cat-savings')
@@ -207,7 +212,7 @@ export function SettingsPage() {
     return () => {
       active = false
     }
-  }, [currentCycleMonth, t, initializeFromPlan, setFixedBills])
+  }, [currentCycleMonth, t, initializeFromPlan, setFixedBills, setMonthlyIncome, setBudgetPlan])
 
   // Formatted income input display
   const formattedIncome = useMemo(() => {
@@ -290,15 +295,23 @@ export function SettingsPage() {
         })),
       ]
 
+      const safeIncome = Math.max(0, Math.round(income))
       // Always save for this month AND set as default template for all subsequent months
       await saveMonthlyPlan(
         {
           month: currentCycleMonth,
-          incomeVnd: Math.max(0, Math.round(income)),
+          incomeVnd: safeIncome,
           allocations,
         },
         true,
       )
+
+      setMonthlyIncome(safeIncome)
+      setBudgetPlan({
+        month: currentCycleMonth,
+        incomeVnd: safeIncome,
+        allocations,
+      })
 
       // 4. Refresh global Daily Limit state in SettingsContext for Dashboard & Report
       await refreshDailyLimit()

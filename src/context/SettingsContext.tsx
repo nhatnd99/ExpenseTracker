@@ -5,51 +5,47 @@ import {
   QUICK_AMOUNTS_STORAGE_KEY,
   QUICK_TEMPLATES_STORAGE_KEY,
   FIXED_BILLS_STORAGE_KEY,
+  MONTHLY_INCOME_STORAGE_KEY,
+  BUDGET_PLAN_STORAGE_KEY,
   DEFAULT_QUICK_AMOUNTS,
   DEFAULT_QUICK_TEMPLATES,
   DEFAULT_FIXED_BILLS,
+  DEFAULT_MONTHLY_INCOME,
 } from './settings-context'
 import type { QuickTemplate } from '@/types/models'
 import type { FixedBillItem } from '@/features/settings/types'
 import { formatCompactVnd } from '@/utils/currency'
 import { getActiveDailyLimit } from '@/features/monthly-plans/monthlyPlanService'
+import { useLocalStorage } from '@/hooks/useLocalStorage'
 
 export function SettingsProvider({ children }: { children: ReactNode }) {
-  const [payDay, setPayDayState] = useState<number>(() => {
-    try {
-      const stored = localStorage.getItem(PAYDAY_STORAGE_KEY)
-      if (stored) {
-        const val = parseInt(stored, 10)
-        if (val >= 1 && val <= 28) return val
-      }
-    } catch {
-      // ignore
-    }
-    // Default is 1 if not configured by user
-    return 1
-  })
+  // 1. PayDay - Persisted via useLocalStorage
+  const [payDay, setPayDayState] = useLocalStorage<number>(PAYDAY_STORAGE_KEY, 1)
 
+  const setPayDay = useCallback((newDay: number) => {
+    const safeDay = Math.min(28, Math.max(1, Math.floor(newDay)))
+    setPayDayState(safeDay)
+  }, [setPayDayState])
+
+  // Daily limit is derived from active plan and payday
   const [dailyLimit, setDailyLimit] = useState<number>(0)
 
-  const [quickAmounts, setQuickAmountsState] = useState<number[]>(() => {
-    try {
-      const stored = localStorage.getItem(QUICK_AMOUNTS_STORAGE_KEY)
-      if (stored) {
-        const parsed = JSON.parse(stored)
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          const valid = parsed
-            .map((v) => Math.floor(Number(v)))
-            .filter((v) => Number.isFinite(v) && v > 0)
-          if (valid.length > 0) {
-            return Array.from(new Set(valid)).sort((a, b) => a - b)
-          }
+  // 2. Quick Amounts - Persisted via useLocalStorage
+  const [quickAmounts, setQuickAmountsState] = useLocalStorage<number[]>(
+    QUICK_AMOUNTS_STORAGE_KEY,
+    DEFAULT_QUICK_AMOUNTS,
+    useCallback((val: unknown) => {
+      if (Array.isArray(val) && val.length > 0) {
+        const valid = val
+          .map((v) => Math.floor(Number(v)))
+          .filter((v) => Number.isFinite(v) && v > 0)
+        if (valid.length > 0) {
+          return Array.from(new Set(valid)).sort((a, b) => a - b)
         }
       }
-    } catch {
-      // ignore
-    }
-    return DEFAULT_QUICK_AMOUNTS
-  })
+      return DEFAULT_QUICK_AMOUNTS
+    }, []),
+  )
 
   const addQuickAmount = useCallback((amount: number): boolean => {
     const clean = Math.floor(amount)
@@ -58,89 +54,54 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
 
     const next = [...quickAmounts, clean].sort((a, b) => a - b)
     setQuickAmountsState(next)
-    try {
-      localStorage.setItem(QUICK_AMOUNTS_STORAGE_KEY, JSON.stringify(next))
-    } catch {
-      // ignore
-    }
     return true
-  }, [quickAmounts])
+  }, [quickAmounts, setQuickAmountsState])
 
   const removeQuickAmount = useCallback((amount: number) => {
-    setQuickAmountsState((prev) => {
-      const next = prev.filter((a) => a !== amount)
-      try {
-        localStorage.setItem(QUICK_AMOUNTS_STORAGE_KEY, JSON.stringify(next))
-      } catch {
-        // ignore
-      }
-      return next
-    })
-  }, [])
+    setQuickAmountsState((prev) => prev.filter((a) => a !== amount))
+  }, [setQuickAmountsState])
 
   const setQuickAmounts = useCallback((amounts: number[]) => {
     const valid = Array.from(
       new Set(amounts.map((v) => Math.floor(Number(v))).filter((v) => Number.isFinite(v) && v > 0))
     ).sort((a, b) => a - b)
     setQuickAmountsState(valid)
-    try {
-      localStorage.setItem(QUICK_AMOUNTS_STORAGE_KEY, JSON.stringify(valid))
-    } catch {
-      // ignore
-    }
-  }, [])
+  }, [setQuickAmountsState])
 
-  // Quick Transaction Templates State with Automatic Migration
-  const [quickTemplates, setQuickTemplatesState] = useState<QuickTemplate[]>(() => {
-    try {
-      const stored = localStorage.getItem(QUICK_TEMPLATES_STORAGE_KEY)
-      if (stored) {
-        const parsed = JSON.parse(stored)
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          const valid = parsed.filter(
-            (item): item is QuickTemplate =>
-              typeof item === 'object' &&
-              item !== null &&
-              typeof item.id === 'string' &&
-              typeof item.name === 'string' &&
-              typeof item.amount === 'number' &&
-              item.amount > 0 &&
-              typeof item.categoryId === 'string' &&
-              (item.type === 'expense' || item.type === 'income')
-          )
-          if (valid.length > 0) {
-            return valid
+  // 3. Quick Transaction Templates - Persisted via useLocalStorage with migration support
+  const [quickTemplates, setQuickTemplatesState] = useLocalStorage<QuickTemplate[]>(
+    QUICK_TEMPLATES_STORAGE_KEY,
+    () => {
+      try {
+        if (typeof window !== 'undefined') {
+          // Check legacy quick amounts migration if no templates exist
+          const legacy = window.localStorage.getItem(QUICK_AMOUNTS_STORAGE_KEY)
+          if (legacy) {
+            const parsedLegacy = JSON.parse(legacy)
+            if (Array.isArray(parsedLegacy) && parsedLegacy.length > 0) {
+              const migrated: QuickTemplate[] = parsedLegacy
+                .filter((n) => typeof n === 'number' && n > 0)
+                .map((amt, idx) => ({
+                  id: `tpl-migrated-${idx}-${amt}`,
+                  name: `${formatCompactVnd(amt)}`,
+                  amount: amt,
+                  categoryId: 'cat-expenses',
+                  note: '',
+                  type: 'expense' as const,
+                }))
+
+              if (migrated.length > 0) {
+                return migrated
+              }
+            }
           }
         }
+      } catch {
+        // ignore
       }
-
-      // Migration: Check legacy quick amounts [25000, 30000, 50000]
-      const legacy = localStorage.getItem(QUICK_AMOUNTS_STORAGE_KEY)
-      if (legacy) {
-        const parsedLegacy = JSON.parse(legacy)
-        if (Array.isArray(parsedLegacy) && parsedLegacy.length > 0) {
-          const migrated: QuickTemplate[] = parsedLegacy
-            .filter((n) => typeof n === 'number' && n > 0)
-            .map((amt, idx) => ({
-              id: `tpl-migrated-${idx}-${amt}`,
-              name: `${formatCompactVnd(amt)}`,
-              amount: amt,
-              categoryId: 'cat-expenses',
-              note: '',
-              type: 'expense' as const,
-            }))
-
-          if (migrated.length > 0) {
-            localStorage.setItem(QUICK_TEMPLATES_STORAGE_KEY, JSON.stringify(migrated))
-            return migrated
-          }
-        }
-      }
-    } catch {
-      // ignore
-    }
-    return DEFAULT_QUICK_TEMPLATES
-  })
+      return DEFAULT_QUICK_TEMPLATES
+    },
+  )
 
   const addQuickTemplate = useCallback((templateData: Omit<QuickTemplate, 'id'>): boolean => {
     if (!templateData.name.trim() || templateData.amount <= 0 || !templateData.categoryId) {
@@ -156,17 +117,9 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       type: templateData.type || 'expense',
     }
 
-    setQuickTemplatesState((prev) => {
-      const next = [...prev, newTemplate]
-      try {
-        localStorage.setItem(QUICK_TEMPLATES_STORAGE_KEY, JSON.stringify(next))
-      } catch {
-        // ignore
-      }
-      return next
-    })
+    setQuickTemplatesState((prev) => [...prev, newTemplate])
     return true
-  }, [])
+  }, [setQuickTemplatesState])
 
   const updateQuickTemplate = useCallback(
     (id: string, updates: Partial<Omit<QuickTemplate, 'id'>>): boolean => {
@@ -185,66 +138,43 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
           }
           return t
         })
-        if (updated) {
-          try {
-            localStorage.setItem(QUICK_TEMPLATES_STORAGE_KEY, JSON.stringify(next))
-          } catch {
-            // ignore
-          }
-        }
         return next
       })
       return updated
     },
-    []
+    [setQuickTemplatesState]
   )
 
   const deleteQuickTemplate = useCallback((id: string) => {
-    setQuickTemplatesState((prev) => {
-      const next = prev.filter((t) => t.id !== id)
-      try {
-        localStorage.setItem(QUICK_TEMPLATES_STORAGE_KEY, JSON.stringify(next))
-      } catch {
-        // ignore
-      }
-      return next
-    })
-  }, [])
+    setQuickTemplatesState((prev) => prev.filter((t) => t.id !== id))
+  }, [setQuickTemplatesState])
 
   const setQuickTemplates = useCallback((templates: QuickTemplate[]) => {
     setQuickTemplatesState(templates)
-    try {
-      localStorage.setItem(QUICK_TEMPLATES_STORAGE_KEY, JSON.stringify(templates))
-    } catch {
-      // ignore
-    }
-  }, [])
+  }, [setQuickTemplatesState])
 
-  // Fixed Bills Global State
-  const [fixedBills, setFixedBillsState] = useState<FixedBillItem[]>(() => {
-    try {
-      const stored = localStorage.getItem(FIXED_BILLS_STORAGE_KEY)
-      if (stored) {
-        const parsed = JSON.parse(stored)
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          return parsed as FixedBillItem[]
-        }
-      }
-    } catch {
-      // ignore
-    }
-    return DEFAULT_FIXED_BILLS
-  })
+  // 4. Fixed Bills - Persisted via useLocalStorage
+  const [fixedBills, setFixedBillsState] = useLocalStorage<FixedBillItem[]>(
+    FIXED_BILLS_STORAGE_KEY,
+    DEFAULT_FIXED_BILLS,
+  )
 
   const setFixedBills = useCallback((bills: FixedBillItem[]) => {
     setFixedBillsState(bills)
-    try {
-      localStorage.setItem(FIXED_BILLS_STORAGE_KEY, JSON.stringify(bills))
-    } catch {
-      // ignore
-    }
-  }, [])
+  }, [setFixedBillsState])
 
+  // 5. Monthly Income & Budget Plan - Persisted via useLocalStorage
+  const [monthlyIncome, setMonthlyIncome] = useLocalStorage<number>(
+    MONTHLY_INCOME_STORAGE_KEY,
+    DEFAULT_MONTHLY_INCOME,
+  )
+
+  const [budgetPlan, setBudgetPlan] = useLocalStorage<unknown>(
+    BUDGET_PLAN_STORAGE_KEY,
+    null,
+  )
+
+  // Daily limit calculation
   const refreshDailyLimit = useCallback(async (): Promise<number> => {
     try {
       const limit = await getActiveDailyLimit(payDay)
@@ -270,16 +200,6 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     }
   }, [payDay])
 
-  const setPayDay = (newDay: number) => {
-    const safeDay = Math.min(28, Math.max(1, Math.floor(newDay)))
-    setPayDayState(safeDay)
-    try {
-      localStorage.setItem(PAYDAY_STORAGE_KEY, String(safeDay))
-    } catch {
-      // ignore
-    }
-  }
-
   return (
     <SettingsContext.Provider
       value={{
@@ -298,6 +218,10 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         setQuickTemplates,
         fixedBills,
         setFixedBills,
+        monthlyIncome,
+        setMonthlyIncome,
+        budgetPlan,
+        setBudgetPlan,
       }}
     >
       {children}
