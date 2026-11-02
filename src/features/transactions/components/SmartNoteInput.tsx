@@ -18,25 +18,22 @@ export const SmartNoteInput: React.FC<SmartNoteInputProps> = ({
 }) => {
   const { t } = useTranslation()
   const { topNotes } = useSmartNotes(categoryId)
-  const resolvedPlaceholder = placeholder || t('transactions.notePlaceholder', 'Ví dụ: Cơm trưa đồng nghiệp, siêu thị…')
+  const resolvedPlaceholder = placeholder || t('transactions.notePlaceholder', 'Ghi chú')
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-1.5">
       <input
         type="text"
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={resolvedPlaceholder}
-        className="w-full rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg-subtle)] px-4 py-3 text-base sm:text-sm text-[var(--color-text-primary)] placeholder-[var(--color-text-muted)] focus:bg-[var(--color-bg-surface)] focus:border-[var(--color-border-focused)] focus:outline-none transition-colors"
+        className="w-full rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg-subtle)] px-3.5 py-2.5 text-xs text-[var(--color-text-primary)] placeholder-[var(--color-text-muted)] focus:bg-[var(--color-bg-surface)] focus:border-[var(--color-border-focused)] focus:outline-none transition-colors"
       />
 
-      {/* 5 Smart Suggestion Chips */}
+      {/* Smart Suggestion Chips */}
       {topNotes.length > 0 && (
         <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
-          <span className="flex items-center gap-1 text-[11px] font-semibold text-[var(--color-text-muted)] mr-0.5">
-            <Sparkles className="h-3 w-3 text-[var(--color-warning)]" />
-            {t('transactions.smartNotes', 'Gợi ý:')}
-          </span>
+          <Sparkles className="h-3 w-3 text-[var(--color-warning)] shrink-0" />
           {topNotes.map((note) => {
             const isSelected = value === note
             return (
@@ -44,7 +41,7 @@ export const SmartNoteInput: React.FC<SmartNoteInputProps> = ({
                 key={note}
                 type="button"
                 onClick={() => onChange(note)}
-                className={`rounded-full px-2.5 py-1 text-xs font-medium transition-all active:scale-95 cursor-pointer ${
+                className={`rounded-full px-2.5 py-0.5 text-xs font-medium transition-all active:scale-95 cursor-pointer ${
                   isSelected
                     ? 'bg-[var(--color-primary-soft)] text-[var(--color-primary)] border border-[var(--color-primary)] font-bold'
                     : 'bg-[var(--color-bg-subtle)] text-[var(--color-text-secondary)] border border-[var(--color-border)] hover:bg-[var(--color-border)]'

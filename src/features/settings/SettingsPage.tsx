@@ -6,6 +6,7 @@ import {
   CheckCircle2,
   CalendarRange,
   ChevronDown,
+  ChevronRight,
   Receipt,
   Wallet,
   Plus,
@@ -13,12 +14,10 @@ import {
   Lock,
   Settings2,
   AlertTriangle,
-  Pencil,
   Sparkles,
 } from 'lucide-react'
-import type { QuickTemplate, BudgetCategory } from '@/types/models'
+import type { BudgetCategory } from '@/types/models'
 import { ManageQuickTemplateModal } from './components/ManageQuickTemplateModal'
-import { formatCurrencyDisplay } from '@/utils/currency'
 import { db } from '@/db/database'
 import { PageContainer } from '@/components/layout/PageContainer'
 import { useSettings } from '@/context/useSettings'
@@ -53,9 +52,6 @@ export function SettingsPage() {
     setPayDay,
     refreshDailyLimit,
     quickTemplates,
-    addQuickTemplate,
-    updateQuickTemplate,
-    deleteQuickTemplate,
   } = useSettings()
   const todayStr = useMemo(() => getTodayString(), [])
   const currentCycleMonth = useMemo(() => getCycleMonthForDate(todayStr, payDay), [todayStr, payDay])
@@ -67,7 +63,6 @@ export function SettingsPage() {
 
   // Quick Templates Modal & Categories State
   const [isTemplateModalOpen, setIsTemplateModalOpen] = useState(false)
-  const [editingTemplate, setEditingTemplate] = useState<QuickTemplate | null>(null)
   const [allCategories, setAllCategories] = useState<BudgetCategory[]>([])
 
   useEffect(() => {
@@ -79,30 +74,6 @@ export function SettingsPage() {
       active = false
     }
   }, [])
-
-  const handleOpenAddTemplate = () => {
-    setEditingTemplate(null)
-    setIsTemplateModalOpen(true)
-  }
-
-  const handleOpenEditTemplate = (tpl: QuickTemplate) => {
-    setEditingTemplate(tpl)
-    setIsTemplateModalOpen(true)
-  }
-
-  const handleSaveTemplate = (data: Omit<QuickTemplate, 'id'>, id?: string) => {
-    if (id) {
-      updateQuickTemplate(id, data)
-    } else {
-      addQuickTemplate(data)
-    }
-  }
-
-  const handleDeleteTemplate = (id: string) => {
-    if (confirm(t('settings.confirmDeleteTemplate', 'Bạn có chắc chắn muốn xóa biểu mẫu nhanh này?'))) {
-      deleteQuickTemplate(id)
-    }
-  }
 
   // Monthly income
   const [income, setIncome] = useState<number>(10_000_000)
@@ -812,141 +783,66 @@ export function SettingsPage() {
         {/* ========================================================
             SECTION 3: Manage Quick Templates (Quản lý biểu mẫu nhanh)
             ======================================================== */}
-        <div className="rounded-3xl border border-[var(--color-border)] bg-[var(--color-bg-surface)] p-4 sm:p-5 shadow-2xs space-y-4 transition-colors box-border">
-          {/* Header */}
-          <div className="flex items-center justify-between gap-2.5 border-b border-[var(--color-border)] pb-3">
+        <div
+          role="button"
+          tabIndex={0}
+          onClick={() => setIsTemplateModalOpen(true)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              setIsTemplateModalOpen(true)
+            }
+          }}
+          className="rounded-3xl border border-[var(--color-border)] bg-[var(--color-bg-surface)] p-4 sm:p-5 shadow-2xs space-y-3 transition-all hover:border-[var(--color-primary)] cursor-pointer active:scale-[0.99] group box-border"
+        >
+          <div className="flex items-center justify-between gap-2.5">
             <div className="flex items-center gap-2.5 min-w-0 flex-1">
-              <div className="flex h-9 w-9 items-center justify-center rounded-2xl bg-amber-500/10 text-amber-600 dark:text-amber-400 shrink-0">
-                <Sparkles className="h-4.5 w-4.5" />
+              <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-amber-500/10 text-amber-600 dark:text-amber-400 shrink-0 group-hover:scale-105 transition-transform">
+                <Sparkles className="h-5 w-5" />
               </div>
               <div className="min-w-0 flex-1">
-                <h2 className="text-sm font-bold text-[var(--color-text-primary)] leading-tight">
-                  {t('settings.manageTemplatesTitle', 'Quản lý biểu mẫu nhanh')}
-                </h2>
-                <p className="text-xs text-[var(--color-text-muted)] truncate">
+                <div className="flex items-center gap-2">
+                  <h2 className="text-sm font-bold text-[var(--color-text-primary)] group-hover:text-[var(--color-primary)] transition-colors leading-tight">
+                    {t('settings.manageTemplatesTitle', 'Quản lý biểu mẫu nhanh')}
+                  </h2>
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 shrink-0">
+                    {quickTemplates.length}
+                  </span>
+                </div>
+                <p className="text-xs text-[var(--color-text-muted)] truncate mt-0.5">
                   {t('settings.manageTemplatesDesc', 'Cấu hình sẵn các biểu mẫu giao dịch hay dùng để tự động điền khi ghi chép')}
                 </p>
               </div>
             </div>
 
-            <button
-              type="button"
-              onClick={handleOpenAddTemplate}
-              className="py-1.5 px-3 rounded-xl bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] active:scale-95 text-white text-xs font-bold shadow-xs cursor-pointer transition-all flex items-center gap-1.5 shrink-0"
-            >
-              <Plus className="h-3.5 w-3.5" />
-              <span>{t('settings.addTemplateBtn', 'Thêm biểu mẫu')}</span>
-            </button>
-          </div>
-
-          {/* Current Templates List */}
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <span className="block text-[11px] font-bold uppercase tracking-wider text-[var(--color-text-secondary)]">
-                {t('settings.templatesListLabel', 'Danh sách biểu mẫu')} ({quickTemplates.length})
-              </span>
+            <div className="flex items-center gap-2 shrink-0 text-xs font-bold text-[var(--color-primary)]">
+              <span className="hidden sm:inline">{t('common.edit', 'Chỉnh sửa')}</span>
+              <ChevronRight className="h-4 w-4 text-[var(--color-text-muted)] group-hover:text-[var(--color-primary)] group-hover:translate-x-0.5 transition-all" />
             </div>
-
-            {quickTemplates.length === 0 ? (
-              <div className="text-center py-6 space-y-2 border border-dashed border-[var(--color-border)] rounded-2xl p-4">
-                <p className="text-xs text-[var(--color-text-muted)] italic">
-                  {t('settings.noTemplates', 'Chưa có biểu mẫu nào. Hãy bấm "Thêm biểu mẫu" để tạo mới.')}
-                </p>
-                <button
-                  type="button"
-                  onClick={handleOpenAddTemplate}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-[var(--color-border)] bg-[var(--color-bg-subtle)] hover:bg-[var(--color-bg-surface)] text-xs font-semibold text-[var(--color-primary)] cursor-pointer transition-colors"
-                >
-                  <Plus className="h-3 w-3" />
-                  <span>{t('settings.addTemplateBtn', 'Thêm biểu mẫu')}</span>
-                </button>
-              </div>
-            ) : (
-              <div className="space-y-2 pt-0.5">
-                {quickTemplates.map((tpl) => {
-                  const cat = allCategories.find((c) => c.id === tpl.categoryId)
-                  return (
-                    <div
-                      key={tpl.id}
-                      className="flex items-center justify-between gap-3 p-3 rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg-subtle)] hover:bg-[var(--color-bg-surface)] transition-all shadow-2xs box-border"
-                    >
-                      {/* Left: Icon & Info */}
-                      <div className="flex items-center gap-3 min-w-0 flex-1">
-                        <div
-                          className={`flex h-10 w-10 items-center justify-center rounded-xl shrink-0 ${
-                            tpl.type === 'income'
-                              ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
-                              : 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20'
-                          }`}
-                        >
-                          <CategoryIconRenderer icon={cat?.icon} size={18} />
-                        </div>
-
-                        <div className="min-w-0 flex-1 space-y-0.5">
-                          <div className="flex items-center gap-1.5 flex-wrap">
-                            <span className="text-xs font-bold text-[var(--color-text-primary)] truncate">
-                              {tpl.name}
-                            </span>
-                            <span
-                              className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
-                                tpl.type === 'income'
-                                  ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400'
-                                  : 'bg-rose-500/15 text-rose-600 dark:text-rose-400'
-                              }`}
-                            >
-                              {tpl.type === 'income' ? t('transactions.typeIncome', 'Thu') : t('transactions.typeExpense', 'Chi')}
-                            </span>
-                          </div>
-
-                          <div className="flex items-center gap-1.5 text-[11px] text-[var(--color-text-muted)] truncate">
-                            <span>{cat?.name || t('transactions.categories', 'Danh mục')}</span>
-                            {tpl.note && (
-                              <>
-                                <span>•</span>
-                                <span className="truncate italic">"{tpl.note}"</span>
-                              </>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Right: Amount & Actions */}
-                      <div className="flex items-center gap-2 shrink-0">
-                        <span
-                          className={`text-xs sm:text-sm font-extrabold amount-display ${
-                            tpl.type === 'income' ? 'text-emerald-600 dark:text-emerald-400' : 'text-[var(--color-text-primary)]'
-                          }`}
-                        >
-                          {tpl.type === 'income' ? '+' : '-'}{formatCurrencyDisplay(String(tpl.amount))} ₫
-                        </span>
-
-                        <div className="flex items-center gap-0.5">
-                          <button
-                            type="button"
-                            onClick={() => handleOpenEditTemplate(tpl)}
-                            className="flex h-7 w-7 items-center justify-center rounded-lg text-[var(--color-text-muted)] hover:bg-[var(--color-bg-surface)] hover:text-[var(--color-text-primary)] border border-transparent hover:border-[var(--color-border)] transition-colors cursor-pointer"
-                            title={t('common.edit', 'Sửa')}
-                            aria-label={t('common.edit', 'Sửa')}
-                          >
-                            <Pencil className="h-3.5 w-3.5" />
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleDeleteTemplate(tpl.id)}
-                            className="flex h-7 w-7 items-center justify-center rounded-lg text-[var(--color-text-muted)] hover:bg-rose-500/10 hover:text-rose-600 dark:hover:text-rose-400 border border-transparent hover:border-rose-500/20 transition-colors cursor-pointer"
-                            title={t('common.delete', 'Xóa')}
-                            aria-label={t('common.delete', 'Xóa')}
-                          >
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  )
-                })}
-              </div>
-            )}
           </div>
+
+          {/* Quick preview of template chips */}
+          {quickTemplates.length > 0 && (
+            <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pt-1">
+              {quickTemplates.slice(0, 5).map((tpl) => (
+                <span
+                  key={tpl.id}
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-[var(--color-bg-subtle)] border border-[var(--color-border)] text-[11px] font-semibold text-[var(--color-text-secondary)] shrink-0"
+                >
+                  <span
+                    className={`w-1.5 h-1.5 rounded-full ${
+                      tpl.type === 'income' ? 'bg-emerald-500' : 'bg-rose-500'
+                    }`}
+                  />
+                  <span className="truncate max-w-[120px]">{tpl.name}</span>
+                </span>
+              ))}
+              {quickTemplates.length > 5 && (
+                <span className="text-[10px] font-bold text-[var(--color-text-muted)] px-1 shrink-0">
+                  +{quickTemplates.length - 5}
+                </span>
+              )}
+            </div>
+          )}
         </div>
 
         {/* ===================================================
@@ -1035,9 +931,7 @@ export function SettingsPage() {
       <ManageQuickTemplateModal
         isOpen={isTemplateModalOpen}
         onClose={() => setIsTemplateModalOpen(false)}
-        initialTemplate={editingTemplate}
         categories={allCategories}
-        onSave={handleSaveTemplate}
       />
     </PageContainer>
   )

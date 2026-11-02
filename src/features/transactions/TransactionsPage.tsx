@@ -10,6 +10,10 @@ import {
   Wallet,
   AlertTriangle,
   CheckCircle2,
+  Search,
+  X,
+  SlidersHorizontal,
+  ChevronDown,
 } from 'lucide-react'
 import { PageContainer } from '@/components/layout/PageContainer'
 import { getTodayString, shiftDate, parseDateString, formatVnd } from '@/services/dateService'
@@ -137,6 +141,39 @@ export function TransactionsPage() {
       .reduce((sum, tx) => sum + tx.amountVnd, 0)
   }, [transactions])
 
+  // Collapsible Filter & Search States (Default: collapsed)
+  const [isFilterExpanded, setIsFilterExpanded] = useState<boolean>(false)
+  const [searchQuery, setSearchQuery] = useState<string>('')
+  const [typeFilter, setTypeFilter] = useState<'all' | 'expense' | 'income'>('all')
+  const [categoryFilter, setCategoryFilter] = useState<string>('all')
+
+  const filteredTransactions = useMemo(() => {
+    return transactions.filter((tx) => {
+      if (typeFilter !== 'all') {
+        if (typeFilter === 'income' && tx.type !== 'income') return false
+        if (typeFilter === 'expense' && tx.type === 'income') return false
+      }
+      if (categoryFilter !== 'all' && tx.categoryId !== categoryFilter) {
+        return false
+      }
+      if (searchQuery.trim()) {
+        const q = searchQuery.toLowerCase().trim()
+        const matchDesc = tx.description?.toLowerCase().includes(q)
+        const matchCat = tx.categoryName.toLowerCase().includes(q)
+        if (!matchDesc && !matchCat) return false
+      }
+      return true
+    })
+  }, [transactions, typeFilter, categoryFilter, searchQuery])
+
+  const hasActiveFilters = searchQuery.trim() !== '' || typeFilter !== 'all' || categoryFilter !== 'all'
+
+  const handleResetFilters = () => {
+    setSearchQuery('')
+    setTypeFilter('all')
+    setCategoryFilter('all')
+  }
+
   // 2. Remaining balance: [Hạn mức ngày] - [Tổng chi tiêu sinh hoạt ngày]
   const remainingBalance = useMemo(() => {
     return effectiveDailyLimit - totalDailySpent
@@ -248,17 +285,17 @@ export function TransactionsPage() {
   }, [selectedDate, today, i18n.language, t])
 
   return (
-    <PageContainer title={t('transactions.dailyExpenses', 'Chi Tiêu Theo Ngày')}>
-      <div className="space-y-4 pb-6 w-full min-w-0 max-w-full">
+    <PageContainer title={t('app.transactions', 'Chi Tiêu')}>
+      <div className="space-y-3.5 pb-6 w-full min-w-0 max-w-full">
         {/* Date Selector Navigation Bar */}
-        <div className="rounded-3xl border border-[var(--color-border)] bg-[var(--color-bg-surface)] p-3.5 shadow-2xs transition-colors">
+        <div className="rounded-3xl border border-[var(--color-border)] bg-[var(--color-bg-surface)] p-3 shadow-2xs transition-colors">
           <div className="flex items-center justify-between gap-2">
             {/* Prev Day button */}
             <button
               type="button"
               onClick={handlePrevDay}
               aria-label={t('transactions.prevDay', 'Ngày trước')}
-              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-[var(--color-bg-subtle)] text-[var(--color-text-secondary)] hover:bg-[var(--color-border)] active:scale-95 transition-all cursor-pointer"
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-[var(--color-bg-subtle)] text-[var(--color-text-secondary)] hover:bg-[var(--color-border)] active:scale-95 transition-all cursor-pointer"
             >
               <ChevronLeft className="h-5 w-5" />
             </button>
@@ -266,11 +303,11 @@ export function TransactionsPage() {
             {/* Date Center Info & Native Date Picker Trigger */}
             <div className="relative flex-1 text-center px-1 min-w-0">
               <label htmlFor="daily-date-picker" className="cursor-pointer group flex flex-col items-center justify-center">
-                <div className="flex items-center justify-center gap-1.5 text-xs font-semibold text-[var(--color-primary)] group-hover:underline truncate max-w-full">
+                <div className="flex items-center justify-center gap-1.5 text-xs font-bold text-[var(--color-primary)] group-hover:underline truncate max-w-full">
                   <CalendarIcon className="h-3.5 w-3.5 shrink-0" />
                   <span className="capitalize truncate">{formattedDateTitle}</span>
                 </div>
-                <span className="text-[10px] text-[var(--color-text-muted)] mt-0.5">
+                <span className="text-[10px] text-[var(--color-text-muted)] mt-0.5 font-mono">
                   {selectedDate}
                 </span>
               </label>
@@ -293,7 +330,7 @@ export function TransactionsPage() {
               type="button"
               onClick={handleNextDay}
               aria-label={t('transactions.nextDay', 'Ngày sau')}
-              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-[var(--color-bg-subtle)] text-[var(--color-text-secondary)] hover:bg-[var(--color-border)] active:scale-95 transition-all cursor-pointer"
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-[var(--color-bg-subtle)] text-[var(--color-text-secondary)] hover:bg-[var(--color-border)] active:scale-95 transition-all cursor-pointer"
             >
               <ChevronRight className="h-5 w-5" />
             </button>
@@ -301,11 +338,11 @@ export function TransactionsPage() {
 
           {/* Jump to Today button (only shown when viewing a past or future date) */}
           {selectedDate !== today && (
-            <div className="mt-2.5 pt-2 border-t border-[var(--color-border)] flex justify-center">
+            <div className="mt-2 pt-2 border-t border-[var(--color-border)] flex justify-center">
               <button
                 type="button"
                 onClick={handleJumpToToday}
-                className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold bg-[var(--color-primary-soft)] text-[var(--color-primary)] hover:opacity-85 transition-opacity cursor-pointer"
+                className="inline-flex items-center gap-1 px-3 py-0.5 rounded-full text-xs font-semibold bg-[var(--color-primary-soft)] text-[var(--color-primary)] hover:opacity-85 transition-opacity cursor-pointer"
               >
                 <span>{t('transactions.today', 'Hôm nay')} ({today})</span>
               </button>
@@ -351,19 +388,19 @@ export function TransactionsPage() {
 
           {/* 3 Columns: Daily Limit | Total Spent | Remaining Balance */}
           <div className="grid grid-cols-3 gap-1 sm:gap-2 divide-x divide-[var(--color-border)] pt-0.5">
-            {/* Col 1: Daily Limit (Hạn mức ngày: Safe-to-Spend nếu là Hôm nay, Standard nếu là ngày khác) */}
+            {/* Col 1: Daily Limit */}
             <div className="text-center px-1 min-w-0">
               <span className="block text-[10px] font-bold uppercase tracking-wider text-[var(--color-text-muted)] truncate">
                 {isDateToday
-                  ? t('transactions.safeToSpend', 'Hôm Nay Có Thể Tiêu')
-                  : t('transactions.standardDailyLimit', 'Hạn Mức Tiêu Chuẩn')}
+                  ? t('transactions.safeToSpend', 'Có Thể Tiêu')
+                  : t('transactions.standardDailyLimit', 'Hạn Mức')}
               </span>
               <p className="mt-1 text-sm sm:text-base font-extrabold amount-display text-[var(--color-text-primary)] truncate">
                 {formatVnd(effectiveDailyLimit)}
               </p>
             </div>
 
-            {/* Col 2: Total Spent (Tổng chi tiêu sinh hoạt ngày) */}
+            {/* Col 2: Total Spent */}
             <div className="text-center px-1 min-w-0">
               <span className="block text-[10px] font-bold uppercase tracking-wider text-[var(--color-text-muted)] truncate">
                 {t('transactions.totalSpent', 'Đã Tiêu')}
@@ -373,7 +410,7 @@ export function TransactionsPage() {
               </p>
             </div>
 
-            {/* Col 3: Remaining Balance (Số tiền còn lại) */}
+            {/* Col 3: Remaining Balance */}
             <div className="text-center px-1 min-w-0">
               <span className="block text-[10px] font-bold uppercase tracking-wider text-[var(--color-text-muted)] truncate">
                 {t('transactions.remainingBalance', 'Còn Lại')}
@@ -458,7 +495,7 @@ export function TransactionsPage() {
         <button
           type="button"
           onClick={() => setActiveTransaction(undefined)}
-          className="w-full rounded-2xl bg-[var(--color-primary)] px-5 py-3.5 text-center text-sm font-bold text-white shadow-md transition-all hover:bg-[var(--color-primary-hover)] active:scale-[0.99] touch-target cursor-pointer flex items-center justify-center gap-2"
+          className="w-full rounded-2xl bg-[var(--color-primary)] px-5 py-3 text-center text-sm font-bold text-white shadow-md transition-all hover:bg-[var(--color-primary-hover)] active:scale-[0.99] touch-target cursor-pointer flex items-center justify-center gap-2"
         >
           <Plus className="h-5 w-5 stroke-[2.5]" />
           <span>{t('transactions.addExpenseBtn', 'Ghi Khoản Chi Mới')}</span>
@@ -470,35 +507,168 @@ export function TransactionsPage() {
             <LoadingSpinner label={t('common.loading', 'Đang tải…')} />
           </div>
         ) : transactions.length === 0 ? (
-          <div className="rounded-3xl border border-dashed border-[var(--color-border)] bg-[var(--color-bg-surface)] p-8 text-center">
-            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-[var(--color-bg-subtle)] text-[var(--color-text-muted)]">
-              <Receipt className="h-6 w-6" />
+          <div className="rounded-3xl border border-dashed border-[var(--color-border)] bg-[var(--color-bg-surface)] p-6 text-center">
+            <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-full bg-[var(--color-bg-subtle)] text-[var(--color-text-muted)]">
+              <Receipt className="h-5 w-5" />
             </div>
-            <p className="mt-3 text-sm font-bold text-[var(--color-text-primary)]">
+            <p className="mt-2 text-xs font-bold text-[var(--color-text-primary)]">
               {t('transactions.noTransactionsForDay', 'Chưa có khoản chi nào trong ngày này')}
-            </p>
-            <p className="mt-1 text-xs text-[var(--color-text-muted)] max-w-xs mx-auto">
-              {t('transactions.noTransactionsForDayDesc', 'Nhấn "Ghi Khoản Chi Mới" để bắt đầu theo dõi chi tiêu cho ngày này.')}
             </p>
           </div>
         ) : (
           <div className="space-y-2">
+            {/* Header: Title and Filter Toggle */}
             <div className="flex items-center justify-between px-1">
               <p className="text-xs font-bold text-[var(--color-text-muted)] uppercase tracking-wider">
-                {t('transactions.expensesListTitle', { count: transactions.length, defaultValue: `Khoản Chi (${transactions.length})` })}
+                {t('transactions.expensesListTitle', { count: filteredTransactions.length, defaultValue: `Giao Dịch (${filteredTransactions.length})` })}
               </p>
-              <span className="text-[11px] text-[var(--color-text-muted)]">
-                {t('transactions.tapToEdit', 'Chạm để xem & sửa')}
-              </span>
+
+              {/* Minimalist Filter Toggle Button */}
+              <button
+                type="button"
+                onClick={() => setIsFilterExpanded((prev) => !prev)}
+                className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+                  isFilterExpanded || hasActiveFilters
+                    ? 'bg-[var(--color-primary-soft)] text-[var(--color-primary)] border border-[var(--color-primary)]/30 font-bold'
+                    : 'bg-[var(--color-bg-subtle)] text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] border border-[var(--color-border)]'
+                }`}
+                title={t('transactions.filterBtn', 'Bộ lọc')}
+              >
+                <SlidersHorizontal className="h-3 w-3 shrink-0" />
+                <span>{t('transactions.filterBtn', 'Bộ lọc')}</span>
+                {hasActiveFilters && (
+                  <span className="h-1.5 w-1.5 rounded-full bg-[var(--color-primary)] shrink-0" />
+                )}
+                <ChevronDown
+                  className={`h-3 w-3 transition-transform duration-200 shrink-0 ${
+                    isFilterExpanded ? 'rotate-180' : ''
+                  }`}
+                />
+              </button>
             </div>
 
-            {transactions.map((tx) => (
-              <ExpenseItem
-                key={tx.id}
-                expense={tx}
-                onClick={setActiveTransaction}
-              />
-            ))}
+            {/* Collapsible Accordion: Filters & Search */}
+            <div
+              className={`transition-all duration-300 ease-in-out overflow-hidden ${
+                isFilterExpanded ? 'max-h-60 opacity-100' : 'max-h-0 opacity-0 pointer-events-none'
+              }`}
+            >
+              <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg-subtle)] p-2.5 space-y-2 box-border shadow-2xs">
+                {/* Search Bar */}
+                <div className="relative">
+                  <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-[var(--color-text-muted)]" />
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder={t('transactions.searchPlaceholder', 'Tìm ghi chú…')}
+                    className="w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-bg-surface)] pl-8 pr-7 py-1.5 text-xs text-[var(--color-text-primary)] placeholder-[var(--color-text-muted)] focus:outline-none focus:border-[var(--color-border-focused)] transition-colors"
+                  />
+                  {searchQuery && (
+                    <button
+                      type="button"
+                      onClick={() => setSearchQuery('')}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] p-0.5 cursor-pointer"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  )}
+                </div>
+
+                {/* Filter Options: Type + Category */}
+                <div className="flex items-center gap-2 flex-wrap">
+                  {/* Type Segment */}
+                  <div className="flex items-center p-0.5 rounded-xl bg-[var(--color-bg-surface)] border border-[var(--color-border)]">
+                    <button
+                      type="button"
+                      onClick={() => setTypeFilter('all')}
+                      className={`px-2 py-0.5 rounded-lg text-[10px] font-bold transition-all cursor-pointer ${
+                        typeFilter === 'all'
+                          ? 'bg-[var(--color-primary)] text-white shadow-2xs'
+                          : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]'
+                      }`}
+                    >
+                      {t('common.all', 'Tất cả')}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setTypeFilter('expense')}
+                      className={`px-2 py-0.5 rounded-lg text-[10px] font-bold transition-all cursor-pointer ${
+                        typeFilter === 'expense'
+                          ? 'bg-[var(--color-expense)] text-white shadow-2xs'
+                          : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]'
+                      }`}
+                    >
+                      {t('transactions.typeExpense', 'Chi')}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setTypeFilter('income')}
+                      className={`px-2 py-0.5 rounded-lg text-[10px] font-bold transition-all cursor-pointer ${
+                        typeFilter === 'income'
+                          ? 'bg-[var(--color-income)] text-white shadow-2xs'
+                          : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]'
+                      }`}
+                    >
+                      {t('transactions.typeIncome', 'Thu')}
+                    </button>
+                  </div>
+
+                  {/* Category Dropdown */}
+                  <select
+                    value={categoryFilter}
+                    onChange={(e) => setCategoryFilter(e.target.value)}
+                    className="flex-1 min-w-[110px] rounded-xl border border-[var(--color-border)] bg-[var(--color-bg-surface)] px-2 py-1 text-xs font-medium text-[var(--color-text-primary)] focus:outline-none cursor-pointer"
+                  >
+                    <option value="all">{t('transactions.allCategories', 'Tất cả danh mục')}</option>
+                    {categories.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.name}
+                      </option>
+                    ))}
+                  </select>
+
+                  {/* Reset Filters button */}
+                  {hasActiveFilters && (
+                    <button
+                      type="button"
+                      onClick={handleResetFilters}
+                      className="text-[11px] text-rose-500 hover:underline font-semibold cursor-pointer shrink-0"
+                    >
+                      {t('common.reset', 'Đặt lại')}
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Empty state when filters return 0 results */}
+            {filteredTransactions.length === 0 ? (
+              <div className="rounded-2xl border border-dashed border-[var(--color-border)] bg-[var(--color-bg-surface)] p-6 text-center">
+                <p className="text-xs text-[var(--color-text-muted)] italic">
+                  {hasActiveFilters
+                    ? t('transactions.noFilterResults', 'Không có giao dịch nào khớp với bộ lọc')
+                    : t('transactions.noTransactionsForDay', 'Chưa có khoản chi nào trong ngày này')}
+                </p>
+                {hasActiveFilters && (
+                  <button
+                    type="button"
+                    onClick={handleResetFilters}
+                    className="mt-2 text-xs font-semibold text-[var(--color-primary)] hover:underline cursor-pointer"
+                  >
+                    {t('common.reset', 'Đặt lại bộ lọc')}
+                  </button>
+                )}
+              </div>
+            ) : (
+              filteredTransactions.map((tx) => (
+                <ExpenseItem
+                  key={tx.id}
+                  expense={tx}
+                  onClick={setActiveTransaction}
+                />
+              ))
+            )}
           </div>
         )}
       </div>

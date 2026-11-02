@@ -38,7 +38,9 @@
     "pageNotFound": "Page not found",
     "pageNotFoundDesc": "The page you're looking for doesn't exist or has moved.",
     "goToDashboard": "Go to Dashboard",
-    "unexpectedError": "An unexpected error occurred."
+    "unexpectedError": "An unexpected error occurred.",
+    "all": "All",
+    "reset": "Reset"
   },
   "dashboard": {
     "welcomeTitle": "Personal Expense Tracker",
@@ -199,6 +201,10 @@
     "noTransactionsForDay": "No expenses recorded for this day",
     "noTransactionsForDayDesc": "Tap \"Add New Expense\" to record your spending for this day.",
     "expensesListTitle": "Expenses ({{count}})",
+    "filterBtn": "Filter",
+    "searchPlaceholder": "Search notes…",
+    "allCategories": "All categories",
+    "noFilterResults": "No transactions match your filter",
     "tapToEdit": "Tap to view & edit",
     "confirmDelete": "Are you sure you want to delete this expense?",
     "confirmDeleteIncome": "Are you sure you want to delete this income?",

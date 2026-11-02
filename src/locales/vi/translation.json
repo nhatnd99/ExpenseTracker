@@ -38,7 +38,9 @@
     "pageNotFound": "Không tìm thấy trang",
     "pageNotFoundDesc": "Trang bạn đang tìm kiếm không tồn tại hoặc đã bị di chuyển.",
     "goToDashboard": "Đến Tổng quan",
-    "unexpectedError": "Đã xảy ra lỗi không mong muốn."
+    "unexpectedError": "Đã xảy ra lỗi không mong muốn.",
+    "all": "Tất cả",
+    "reset": "Đặt lại"
   },
   "dashboard": {
     "welcomeTitle": "Sổ Chi Tiêu Cá Nhân",
@@ -199,6 +201,10 @@
     "noTransactionsForDay": "Chưa có khoản chi nào trong ngày này",
     "noTransactionsForDayDesc": "Nhấn \"Ghi Khoản Chi Mới\" để bắt đầu theo dõi chi tiêu cho ngày này.",
     "expensesListTitle": "Danh Sách Khoản Chi ({{count}})",
+    "filterBtn": "Bộ lọc",
+    "searchPlaceholder": "Tìm ghi chú…",
+    "allCategories": "Tất cả danh mục",
+    "noFilterResults": "Không có giao dịch nào khớp với bộ lọc",
     "tapToEdit": "Chạm để xem & sửa",
     "confirmDelete": "Bạn có chắc chắn muốn xóa khoản chi này?",
     "confirmDeleteIncome": "Bạn có chắc chắn muốn xóa khoản thu này?",

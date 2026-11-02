@@ -396,12 +396,6 @@ export const CreateExpenseModal: React.FC<CreateExpenseModalProps> = ({
                       </span>
                     )}
                   </div>
-                  <p className="text-[11px] text-[var(--color-text-muted)] mt-0.5 leading-snug">
-                    {t(
-                      'transactions.excludeFromDailyHelp',
-                      'Dành cho hóa đơn lớn (tiền nhà, điện nước...). Không làm âm số tiền được tiêu hôm nay.',
-                    )}
-                  </p>
                 </div>
 
                 {/* Toggle Switch Button */}

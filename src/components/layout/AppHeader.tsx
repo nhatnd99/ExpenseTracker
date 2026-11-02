@@ -11,9 +11,10 @@ export function AppHeader() {
   const getTitle = () => {
     switch (pathname) {
       case '/':
-        return t('app.dashboard')
       case '/transactions':
         return t('app.transactions')
+      case '/dashboard':
+        return t('app.dashboard')
       case '/reports':
         return t('app.reports')
       case '/settings':
