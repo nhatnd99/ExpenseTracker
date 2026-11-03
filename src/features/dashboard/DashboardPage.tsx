@@ -18,7 +18,7 @@ import {
 import { PageContainer } from '@/components/layout/PageContainer'
 import { useSettings } from '@/context/useSettings'
 import { getDashboardData, type DashboardData } from './dashboardService'
-import { formatVnd, getTodayString } from '@/services/dateService'
+import { formatVnd, getTodayString, formatTime } from '@/services/dateService'
 import { getCycleMonthForDate } from '@/features/reports/paydayCycle'
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner'
 import { CategoryIconRenderer } from '@/components/ui/CategoryIconRenderer'
@@ -353,8 +353,14 @@ export function DashboardPage() {
                       <p className="text-xs font-bold text-[var(--color-text-primary)] truncate">
                         {tx.categoryName}
                       </p>
-                      <p className="text-[11px] text-[var(--color-text-muted)] truncate">
-                        {tx.date} {tx.description && `• ${tx.description}`}
+                      <p className="text-[11px] text-[var(--color-text-muted)] truncate flex items-center gap-1">
+                        <span>{tx.date}</span>
+                        {formatTime(tx.transactionDate || tx.createdAt) && (
+                          <span className="font-mono text-[10px] text-[var(--color-text-muted)] shrink-0">
+                            {formatTime(tx.transactionDate || tx.createdAt)}
+                          </span>
+                        )}
+                        {tx.description && <span className="truncate">• {tx.description}</span>}
                       </p>
                     </div>
                   </div>

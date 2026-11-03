@@ -7,7 +7,7 @@ import { transactionRepository } from '@/repositories/transactionRepository'
 import { monthlyPlanRepository } from '@/repositories/monthlyPlanRepository'
 import { allocationRepository } from '@/repositories/allocationRepository'
 import { categoryRepository } from '@/repositories/categoryRepository'
-import { dateToMonthId, getTodayString } from '@/services/dateService'
+import { dateToMonthId, getTodayString, combineDateWithCurrentTime, compareTransactionsDesc } from '@/services/dateService'
 import { calculateDailyLimit } from '@/domain/budgetCalculator'
 import { getCycleMonthForDate, getPaydayCycle, type PaydayCycle } from '@/features/reports/paydayCycle'
 import type { Transaction, DateString, MonthId, BudgetCategory } from '@/types/models'
@@ -19,6 +19,7 @@ export interface CreateTransactionInput {
   type?: 'expense' | 'income'
   description?: string
   isExcludedFromDaily?: boolean
+  transactionDate?: string
 }
 
 export interface EnrichedTransaction extends Transaction {
@@ -121,14 +122,16 @@ export async function getTransactionsForDate(date: DateString): Promise<Enriched
   const categories = await categoryRepository.findAll()
   const categoryMap = new Map(categories.map((c) => [c.id, c]))
 
-  return transactions.map((tx) => {
-    const cat = categoryMap.get(tx.categoryId)
-    return {
-      ...tx,
-      categoryName: cat?.name ?? 'Other',
-      categoryIcon: cat?.icon ?? '💸',
-    }
-  })
+  return transactions
+    .map((tx) => {
+      const cat = categoryMap.get(tx.categoryId)
+      return {
+        ...tx,
+        categoryName: cat?.name ?? 'Other',
+        categoryIcon: cat?.icon ?? '💸',
+      }
+    })
+    .sort(compareTransactionsDesc)
 }
 
 /**
@@ -160,14 +163,16 @@ export async function getTransactionsForMonth(month: MonthId): Promise<EnrichedT
   const categories = await categoryRepository.findAll()
   const categoryMap = new Map(categories.map((c) => [c.id, c]))
 
-  return transactions.map((tx) => {
-    const cat = categoryMap.get(tx.categoryId)
-    return {
-      ...tx,
-      categoryName: cat?.name ?? 'Other',
-      categoryIcon: cat?.icon ?? '💸',
-    }
-  })
+  return transactions
+    .map((tx) => {
+      const cat = categoryMap.get(tx.categoryId)
+      return {
+        ...tx,
+        categoryName: cat?.name ?? 'Other',
+        categoryIcon: cat?.icon ?? '💸',
+      }
+    })
+    .sort(compareTransactionsDesc)
 }
 
 /**
@@ -192,12 +197,14 @@ export async function createTransaction(input: CreateTransactionInput): Promise<
   }
 
   const now = new Date().toISOString()
+  const transactionDate = input.transactionDate ?? combineDateWithCurrentTime(input.date)
   const transaction: Transaction = {
     id: crypto.randomUUID(),
     monthlyPlanId: plan.id,
     categoryId: input.categoryId,
     amountVnd: input.amountVnd,
     date: input.date,
+    transactionDate,
     type: input.type ?? 'expense',
     description: input.description?.trim() || undefined,
     isExcludedFromDaily: input.type === 'income' ? false : Boolean(input.isExcludedFromDaily),
@@ -213,7 +220,7 @@ export async function createTransaction(input: CreateTransactionInput): Promise<
 /** Updates an existing transaction's mutable fields */
 export async function updateTransaction(
   id: string,
-  changes: Partial<Pick<Transaction, 'amountVnd' | 'date' | 'categoryId' | 'type' | 'description' | 'status' | 'isExcludedFromDaily'>>,
+  changes: Partial<Pick<Transaction, 'amountVnd' | 'date' | 'categoryId' | 'type' | 'description' | 'status' | 'isExcludedFromDaily' | 'transactionDate'>>,
 ): Promise<void> {
   let monthlyPlanId: string | undefined
   if (changes.date) {
@@ -233,8 +240,11 @@ export async function updateTransaction(
     monthlyPlanId = plan.id
   }
 
+  const transactionDate = changes.transactionDate ?? (changes.date ? combineDateWithCurrentTime(changes.date) : undefined)
+
   await transactionRepository.update(id, {
     ...changes,
+    ...(transactionDate ? { transactionDate } : {}),
     ...(monthlyPlanId ? { monthlyPlanId } : {}),
   })
 }

@@ -14,7 +14,7 @@ import {
   X,
 } from 'lucide-react'
 import { PageContainer } from '@/components/layout/PageContainer'
-import { getTodayString, parseDateString, formatVnd } from '@/services/dateService'
+import { getTodayString, parseDateString, formatVnd, compareTransactionsDesc, formatTime } from '@/services/dateService'
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner'
 import { useSettings } from '@/context/useSettings'
 import { useDynamicBudget } from '@/features/dashboard/hooks/useDynamicBudget'
@@ -182,7 +182,9 @@ export function ReportsPage() {
   // Transactions list for the selected day in the details sheet
   const selectedDayTransactions = useMemo(() => {
     if (!data || !selectedDateForDetails) return []
-    return data.transactions.filter((tx) => tx.date === selectedDateForDetails)
+    return data.transactions
+      .filter((tx) => tx.date === selectedDateForDetails)
+      .sort(compareTransactionsDesc)
   }, [data, selectedDateForDetails])
 
   // Daily expenses on selected day (excluding fixed bills)
@@ -650,8 +652,15 @@ export function ReportsPage() {
                           <p className="text-xs font-bold text-[var(--color-text-primary)] truncate">
                             {tx.categoryName}
                           </p>
-                          <p className="text-[11px] text-[var(--color-text-muted)] truncate">
-                            {tx.description || `${t('transactions.dateLabel', 'Ngày')}: ${tx.date}`}
+                          <p className="text-[11px] text-[var(--color-text-muted)] truncate flex items-center gap-1">
+                            {formatTime(tx.transactionDate || tx.createdAt) && (
+                              <span className="font-mono text-[10px] text-[var(--color-text-muted)] shrink-0">
+                                {formatTime(tx.transactionDate || tx.createdAt)} •
+                              </span>
+                            )}
+                            <span className="truncate">
+                              {tx.description || `${t('transactions.dateLabel', 'Ngày')}: ${tx.date}`}
+                            </span>
                           </p>
                         </div>
                       </div>

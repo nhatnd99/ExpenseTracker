@@ -16,7 +16,7 @@ import {
   ChevronDown,
 } from 'lucide-react'
 import { PageContainer } from '@/components/layout/PageContainer'
-import { getTodayString, shiftDate, parseDateString, formatVnd } from '@/services/dateService'
+import { getTodayString, shiftDate, parseDateString, formatVnd, compareTransactionsDesc } from '@/services/dateService'
 import {
   getTransactionsForDate,
   getCategories,
@@ -148,22 +148,24 @@ export function TransactionsPage() {
   const [categoryFilter, setCategoryFilter] = useState<string>('all')
 
   const filteredTransactions = useMemo(() => {
-    return transactions.filter((tx) => {
-      if (typeFilter !== 'all') {
-        if (typeFilter === 'income' && tx.type !== 'income') return false
-        if (typeFilter === 'expense' && tx.type === 'income') return false
-      }
-      if (categoryFilter !== 'all' && tx.categoryId !== categoryFilter) {
-        return false
-      }
-      if (searchQuery.trim()) {
-        const q = searchQuery.toLowerCase().trim()
-        const matchDesc = tx.description?.toLowerCase().includes(q)
-        const matchCat = tx.categoryName.toLowerCase().includes(q)
-        if (!matchDesc && !matchCat) return false
-      }
-      return true
-    })
+    return transactions
+      .filter((tx) => {
+        if (typeFilter !== 'all') {
+          if (typeFilter === 'income' && tx.type !== 'income') return false
+          if (typeFilter === 'expense' && tx.type === 'income') return false
+        }
+        if (categoryFilter !== 'all' && tx.categoryId !== categoryFilter) {
+          return false
+        }
+        if (searchQuery.trim()) {
+          const q = searchQuery.toLowerCase().trim()
+          const matchDesc = tx.description?.toLowerCase().includes(q)
+          const matchCat = tx.categoryName.toLowerCase().includes(q)
+          if (!matchDesc && !matchCat) return false
+        }
+        return true
+      })
+      .sort(compareTransactionsDesc)
   }, [transactions, typeFilter, categoryFilter, searchQuery])
 
   const hasActiveFilters = searchQuery.trim() !== '' || typeFilter !== 'all' || categoryFilter !== 'all'
@@ -219,6 +221,7 @@ export function TransactionsPage() {
     amountVnd: number
     categoryId: string
     date: string
+    transactionDate?: string
     description?: string
     isExcludedFromDaily?: boolean
     type?: 'expense' | 'income'
@@ -229,6 +232,7 @@ export function TransactionsPage() {
         amountVnd: data.amountVnd,
         categoryId: data.categoryId,
         date: data.date,
+        transactionDate: data.transactionDate,
         description: data.description,
         isExcludedFromDaily: data.isExcludedFromDaily,
         type: data.type,
@@ -239,6 +243,7 @@ export function TransactionsPage() {
         amountVnd: data.amountVnd,
         categoryId: data.categoryId,
         date: data.date,
+        transactionDate: data.transactionDate,
         description: data.description,
         isExcludedFromDaily: data.isExcludedFromDaily,
         type: data.type,

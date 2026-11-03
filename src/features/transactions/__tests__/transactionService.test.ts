@@ -2,8 +2,9 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { monthlyPlanRepository } from '@/repositories/monthlyPlanRepository'
 import { allocationRepository } from '@/repositories/allocationRepository'
 import { transactionRepository } from '@/repositories/transactionRepository'
-import { getExpenseBudgetMeta } from '../transactionService'
-import type { MonthlyPlan, MonthlyAllocation, Transaction } from '@/types/models'
+import { categoryRepository } from '@/repositories/categoryRepository'
+import { getExpenseBudgetMeta, createTransaction, getTransactionsForDate } from '../transactionService'
+import type { MonthlyPlan, MonthlyAllocation, Transaction, BudgetCategory } from '@/types/models'
 
 describe('transactionService - getExpenseBudgetMeta', () => {
   beforeEach(() => {
@@ -76,5 +77,83 @@ describe('transactionService - getExpenseBudgetMeta', () => {
 
     expect(rawSpentPercent).toBe(2500)
     expect(progressPercent).toBe(100)
+  })
+
+  it('createTransaction automatically generates transactionDate combining date with current system time', async () => {
+    vi.spyOn(monthlyPlanRepository, 'findByMonth').mockResolvedValue({
+      id: 'plan-2026-11',
+      month: '2026-11',
+      incomeVnd: 10_000_000,
+      createdAt: '2026-11-01T00:00:00Z',
+      updatedAt: '2026-11-01T00:00:00Z',
+    })
+    const createSpy = vi.spyOn(transactionRepository, 'create').mockResolvedValue(undefined)
+
+    const tx = await createTransaction({
+      categoryId: 'cat-expenses',
+      amountVnd: 35000,
+      date: '2026-11-02', // Yesterday
+      description: 'Ăn trưa',
+    })
+
+    expect(tx.date).toBe('2026-11-02')
+    expect(tx.transactionDate).toBeDefined()
+    expect(tx.transactionDate).toMatch(/^2026-11-02T/)
+    expect(createSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        date: '2026-11-02',
+        transactionDate: expect.stringMatching(/^2026-11-02T/),
+      }),
+    )
+  })
+
+  it('getTransactionsForDate returns transactions sorted descending with log bù prioritized', async () => {
+    const categories: BudgetCategory[] = [
+      {
+        id: 'cat-expenses',
+        name: 'Chi tiêu',
+        icon: '🛒',
+        type: 'expense',
+        sortOrder: 1,
+        createdAt: '',
+        updatedAt: '',
+      },
+    ]
+
+    const earlierLoggedTx: Transaction = {
+      id: 'tx-earlier',
+      monthlyPlanId: 'plan-1',
+      categoryId: 'cat-expenses',
+      amountVnd: 20000,
+      date: '2026-11-02',
+      transactionDate: '2026-11-02T08:00:00.000Z',
+      createdAt: '2026-11-02T01:00:00.000Z',
+      status: 'cleared',
+      updatedAt: '',
+    }
+
+    const laterBackfilledTx: Transaction = {
+      id: 'tx-backfilled',
+      monthlyPlanId: 'plan-1',
+      categoryId: 'cat-expenses',
+      amountVnd: 50000,
+      date: '2026-11-02',
+      transactionDate: '2026-11-02T21:38:00.000Z',
+      createdAt: '2026-11-03T14:38:00.000Z', // Created later (log bù)
+      status: 'cleared',
+      updatedAt: '',
+    }
+
+    vi.spyOn(transactionRepository, 'findByDateOnly').mockResolvedValue([
+      earlierLoggedTx,
+      laterBackfilledTx,
+    ])
+    vi.spyOn(categoryRepository, 'findAll').mockResolvedValue(categories)
+
+    const list = await getTransactionsForDate('2026-11-02')
+    expect(list.length).toBe(2)
+    // The backfilled record should be sorted first (on top of the list)
+    expect(list[0].id).toBe('tx-backfilled')
+    expect(list[1].id).toBe('tx-earlier')
   })
 })

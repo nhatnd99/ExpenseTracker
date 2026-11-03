@@ -6,6 +6,7 @@
 import { db } from '@/db/database'
 import type { Transaction, DateString } from '@/types/models'
 import { TRANSACTIONS_STORAGE_KEY } from '@/context/transaction-context'
+import { compareTransactionsDesc } from '@/services/dateService'
 
 function getLocalStorageTransactions(): Transaction[] {
   try {
@@ -72,7 +73,7 @@ export const transactionRepository = {
       }
     }
 
-    return txs.sort((a, b) => b.date.localeCompare(a.date))
+    return txs.sort(compareTransactionsDesc)
   },
 
   /** Returns transactions for a plan filtered by a specific date */
@@ -106,7 +107,7 @@ export const transactionRepository = {
       }
     }
 
-    return txs.sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+    return txs.sort(compareTransactionsDesc)
   },
 
   /** Returns transactions between startDate and endDate inclusive (across any plan) */

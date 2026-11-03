@@ -1,7 +1,7 @@
 import React from 'react'
 import { useTranslation } from 'react-i18next'
 import { Edit3 } from 'lucide-react'
-import { formatVnd } from '@/services/dateService'
+import { formatVnd, formatTime } from '@/services/dateService'
 import { CategoryIconRenderer } from '@/components/ui/CategoryIconRenderer'
 import type { EnrichedTransaction } from '../transactionService'
 
@@ -19,6 +19,7 @@ export const ExpenseItem: React.FC<ExpenseItemProps> = ({
   className = '',
 }) => {
   const { t } = useTranslation()
+  const formattedTime = formatTime(expense.transactionDate || expense.createdAt)
 
   return (
     <div
@@ -51,11 +52,19 @@ export const ExpenseItem: React.FC<ExpenseItemProps> = ({
               </span>
             )}
           </div>
-          <p className="text-xs text-[var(--color-text-muted)] truncate">
-            {expense.description
-              ? expense.description
-              : `${t('transactions.dateLabel', 'Ngày')}: ${expense.date}`}
-          </p>
+          <div className="flex items-center gap-1.5 text-xs text-[var(--color-text-muted)] min-w-0">
+            {formattedTime && (
+              <span className="font-mono text-[11px] text-[var(--color-text-muted)] font-medium shrink-0">
+                {formattedTime}
+              </span>
+            )}
+            {formattedTime && <span className="opacity-40 shrink-0">•</span>}
+            <span className="truncate">
+              {expense.description
+                ? expense.description
+                : `${t('transactions.dateLabel', 'Ngày')}: ${expense.date}`}
+            </span>
+          </div>
         </div>
       </div>
 

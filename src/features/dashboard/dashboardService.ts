@@ -17,7 +17,7 @@ import {
 import { getPaydayCycle, type PaydayCycle } from '@/features/reports/paydayCycle'
 import type { MonthId, MonthlyBudgetSummary, DailyBudgetStatus, DateString, Transaction } from '@/types/models'
 import type { EnrichedTransaction } from '@/features/transactions/transactionService'
-import { getTodayString } from '@/services/dateService'
+import { getTodayString, compareTransactionsDesc } from '@/services/dateService'
 
 export interface DashboardData {
   summary: MonthlyBudgetSummary
@@ -85,11 +85,8 @@ export async function getDashboardData(
     isOverBudget: todaySpent > dailyBudgetVnd,
   }
 
-  // Sort descending by date, then by creation
-  const sortedTxs = [...transactions].sort((a, b) => {
-    if (a.date !== b.date) return b.date.localeCompare(a.date)
-    return b.createdAt.localeCompare(a.createdAt)
-  })
+  // Sort descending by date, then by creation/transactionDate
+  const sortedTxs = [...transactions].sort(compareTransactionsDesc)
 
   const recentTransactions: EnrichedTransaction[] = sortedTxs.slice(0, 5).map((tx) => {
     const cat = categoryMap.get(tx.categoryId)

@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { X, Trash2 } from 'lucide-react'
 import type { BudgetCategory } from '@/types/models'
 import type { EnrichedTransaction } from '../transactionService'
-import { getTodayString } from '@/services/dateService'
+import { getTodayString, combineDateWithCurrentTime } from '@/services/dateService'
 import { useNumpadInput } from '../hooks/useNumpadInput'
 import { CustomNumpad } from './CustomNumpad'
 import { CategorySelector } from './CategorySelector'
@@ -26,6 +26,7 @@ export interface CreateExpenseModalProps {
     amountVnd: number
     categoryId: string
     date: string
+    transactionDate?: string
     description?: string
     isExcludedFromDaily?: boolean
     type?: 'expense' | 'income'
@@ -174,12 +175,20 @@ export const CreateExpenseModal: React.FC<CreateExpenseModalProps> = ({
     setErrorMessage(null)
 
     try {
+      // Auto-combine user-selected date with system's current time (Hour/Minute/Second)
+      const autoTransactionDate = combineDateWithCurrentTime(date)
+      const finalTransactionDate =
+        isEditMode && initialTransaction?.date === date && initialTransaction.transactionDate
+          ? initialTransaction.transactionDate
+          : autoTransactionDate
+
       await onSubmit({
         id: initialTransaction?.id,
         type: transactionType,
         amountVnd: numericAmount,
         categoryId: activeCategoryId,
         date,
+        transactionDate: finalTransactionDate,
         description: note.trim() || undefined,
         isExcludedFromDaily: transactionType === 'income' ? false : isExcludedFromDaily,
       })

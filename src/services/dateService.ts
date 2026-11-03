@@ -70,3 +70,75 @@ export function formatVndCompact(amount: number): string {
   return `${amount} ₫`
 }
 
+/**
+ * Combines a "YYYY-MM-DD" date string with the system time (hours, minutes, seconds, milliseconds)
+ * into an ISO timestamp string.
+ * E.g. dateStr = "2026-11-02", current time is 21:38:15 -> "2026-11-02T21:38:15.123+07:00" in UTC ISO format.
+ */
+export function combineDateWithCurrentTime(dateStr: DateString, referenceDate: Date = new Date()): string {
+  if (!dateStr) return new Date().toISOString()
+  const [year, month, day] = dateStr.split('-').map(Number)
+  if (!year || !month || !day) return new Date().toISOString()
+
+  const combined = new Date(
+    year,
+    month - 1,
+    day,
+    referenceDate.getHours(),
+    referenceDate.getMinutes(),
+    referenceDate.getSeconds(),
+    referenceDate.getMilliseconds(),
+  )
+  return combined.toISOString()
+}
+
+/**
+ * Extracts and formats time from an ISO timestamp string or Date object as "HH:mm".
+ * Handles invalid or missing timestamps gracefully by returning an empty string.
+ */
+export function formatTime(isoString?: string): string {
+  if (!isoString) return ''
+  try {
+    const d = new Date(isoString)
+    if (isNaN(d.getTime())) return ''
+    const h = String(d.getHours()).padStart(2, '0')
+    const m = String(d.getMinutes()).padStart(2, '0')
+    return `${h}:${m}`
+  } catch {
+    return ''
+  }
+}
+
+/**
+ * Transaction sorting comparator (Descending):
+ * 1. Primary: Sort descending by date (transactionDate or date portion).
+ * 2. Secondary (if same date): Sort descending by createdAt (or transactionDate timestamp).
+ * Purpose: Ensures newly backfilled records (log bù) or recently created records
+ * for that day always appear at the very top of that day's transaction group.
+ */
+export function compareTransactionsDesc<
+  T extends { date?: string; transactionDate?: string; createdAt?: string }
+>(a: T, b: T): number {
+  // 1. Group / order by date descending
+  const dateA = a.date || a.transactionDate?.slice(0, 10) || ''
+  const dateB = b.date || b.transactionDate?.slice(0, 10) || ''
+
+  if (dateA !== dateB) {
+    return dateB.localeCompare(dateA)
+  }
+
+  // 2. Same day: sort descending by createdAt (most recently logged/created item on top)
+  const createdA = a.createdAt || a.transactionDate || ''
+  const createdB = b.createdAt || b.transactionDate || ''
+
+  if (createdA !== createdB) {
+    return createdB.localeCompare(createdA)
+  }
+
+  // 3. Fallback to transactionDate timestamp if createdAt matches or is absent
+  const txDateA = a.transactionDate || ''
+  const txDateB = b.transactionDate || ''
+  return txDateB.localeCompare(txDateA)
+}
+
+

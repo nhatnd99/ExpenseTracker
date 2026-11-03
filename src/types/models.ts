@@ -110,6 +110,8 @@ export interface Transaction {
   amountVnd: number
   /** Date of the transaction in "YYYY-MM-DD" format */
   date: DateString
+  /** ISO timestamp combining the selected date with the system time (HH:mm:ss) when saved */
+  transactionDate?: string
   /** Type of transaction: expense (default) or income */
   type?: TransactionType
   /** Optional user note */
