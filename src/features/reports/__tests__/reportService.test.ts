@@ -89,6 +89,11 @@ describe('reportService - Dynamic Daily Budget Recalculation (Safe-to-Spend)', (
     // Average daily spend: 500k total daily spent / 2 active spending days (19 & 20 Oct) = 250,000đ
     expect(res.activeSpendingDays).toBe(2)
     expect(res.averageDailySpend).toBe(250_000)
+    // Benchmark average active limit:
+    // 19 Oct (Past): 96,774đ
+    // 20 Oct (Today): 83,333đ
+    // Average active limit = (96,774 + 83,333) / 2 = 90,054đ
+    expect(res.averageActiveLimit).toBe(Math.round((96_774 + 83_333) / 2))
 
     // 1. Check Past Day (2026-10-19):
     // Day 1 has 31 remaining days. Limit = 3,000,000 / 31 = 96,774đ
@@ -174,6 +179,8 @@ describe('reportService - Dynamic Daily Budget Recalculation (Safe-to-Spend)', (
     // Average daily spend: only Day 1 had spending (1 active day) -> 40,000 / 1 = 40,000đ (even though 2 days elapsed)
     expect(res.activeSpendingDays).toBe(1)
     expect(res.averageDailySpend).toBe(40_000)
+    // Benchmark limit for Day 1 (Past) is baseDailyLimit = 300,000 / 31 = 9,677đ
+    expect(res.averageActiveLimit).toBe(Math.round(300_000 / 31))
   })
 
   it('calculates average daily spend accurately deduplicating multiple records on same day and ignoring zero days', async () => {
@@ -273,5 +280,40 @@ describe('reportService - Dynamic Daily Budget Recalculation (Safe-to-Spend)', (
     // Total valid spent: 50k + 50k + 200k = 300,000đ
     // Average daily spend: 300,000 / 2 = 150,000đ
     expect(res.averageDailySpend).toBe(150_000)
+    // Both Day 2 and Day 4 are past days (today is Day 5) -> limit for both is baseDailyLimit = 1,000,000 / 31 = 32,258đ
+    expect(res.averageActiveLimit).toBe(Math.round(1_000_000 / 31))
+  })
+
+  it('falls back to baseDailyLimit when there are no active spending days', async () => {
+    const todayStr = '2026-10-05'
+    const monthId = '2026-10'
+    const payDay = 1
+
+    const plan: MonthlyPlan = {
+      id: 'plan-empty',
+      month: monthId,
+      incomeVnd: 10_000_000,
+      createdAt: '',
+      updatedAt: '',
+    }
+    const alloc: MonthlyAllocation = {
+      id: 'alloc-empty',
+      monthlyPlanId: 'plan-empty',
+      categoryId: 'cat-expenses',
+      allocationPercent: 10, // 1,000,000đ
+      createdAt: '',
+      updatedAt: '',
+    }
+
+    vi.spyOn(categoryRepository, 'findAll').mockResolvedValue([])
+    vi.spyOn(monthlyPlanRepository, 'findByMonth').mockResolvedValue(plan)
+    vi.spyOn(allocationRepository, 'findByPlanId').mockResolvedValue([alloc])
+    vi.spyOn(transactionRepository, 'findByDateRange').mockResolvedValue([])
+
+    const res = await getCycleReportData(monthId, payDay, todayStr)
+
+    expect(res.activeSpendingDays).toBe(0)
+    expect(res.averageDailySpend).toBe(0)
+    expect(res.averageActiveLimit).toBe(res.baseDailyLimit)
   })
 })

@@ -139,7 +139,8 @@ export function ReportsPage() {
   })
   const safeToSpend = dynamicBudget.todayLimit
   const baseDailyLimit = data?.baseDailyLimit ?? (data?.cycle.totalDays ? Math.round(data.progress.budgetVnd / data.cycle.totalDays) : 0)
-  const isAverageSafe = Boolean(data && data.averageDailySpend <= baseDailyLimit)
+  const benchmarkLimit = data?.averageActiveLimit ?? baseDailyLimit
+  const isAverageSafe = Boolean(data && data.averageDailySpend <= benchmarkLimit)
 
   // 3-State Time Logic Calendar Grid:
   // 1. Quá khứ: limit = baseDailyLimit (Hạn mức tĩnh gốc), Balance = limit - spentOnThisDay

@@ -52,6 +52,7 @@ export interface CycleReportData {
   totalExtraIncome: number
   averageDailySpend: number
   activeSpendingDays: number
+  averageActiveLimit: number
 }
 
 export async function getCycleReportData(
@@ -170,6 +171,24 @@ export async function getCycleReportData(
   const averageDailySpend =
     activeSpendingDays > 0 ? Math.round(totalValidSpent / activeSpendingDays) : 0
 
+  // Step 4: Calculate Average Active Limit for dynamic benchmark comparison
+  // For each active day, get its exact limit (Past: baseDailyLimit, Today/Future: safeToSpend)
+  const getLimitForDate = (dateStr: DateString): number => {
+    const cellDateObj = parseDateString(dateStr)
+    if (isBefore(cellDateObj, todayDateObj)) {
+      return baseDailyLimit
+    }
+    return safeToSpend
+  }
+
+  let totalActiveLimit = 0
+  for (const dateStr of activeDaysSet) {
+    totalActiveLimit += getLimitForDate(dateStr)
+  }
+
+  const averageActiveLimit =
+    activeSpendingDays > 0 ? Math.round(totalActiveLimit / activeSpendingDays) : baseDailyLimit
+
   // 6. Standardized 3-State Time Logic:
   // - Quá khứ (date < today): limit = baseDailyLimit (Hạn mức tĩnh gốc), balance = limit - spentOnDay
   // - Hôm nay (date === today): limit = dynamicSafeToSpend (Hạn mức linh hoạt), balance = limit - spentOnDay
@@ -245,5 +264,6 @@ export async function getCycleReportData(
     totalExtraIncome,
     averageDailySpend,
     activeSpendingDays,
+    averageActiveLimit,
   }
 }
