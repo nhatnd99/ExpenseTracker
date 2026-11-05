@@ -51,6 +51,7 @@ export interface CycleReportData {
   totalExcludedBills: number
   totalExtraIncome: number
   averageDailySpend: number
+  activeSpendingDays: number
 }
 
 export async function getCycleReportData(
@@ -139,7 +140,35 @@ export async function getCycleReportData(
     totalExtraIncome,
   })
   const safeToSpend = dynamicResult.todayLimit
-  const averageDailySpend = Math.round(spentToDate / Math.max(1, passedDays))
+
+  // Calculate Average Daily Spend: only divide by days that ACTUALLY HAD spending transactions (Active Days)
+  // Step 1: Filter valid daily expenses up to current date (type !== 'income' and !isExcludedFromDaily)
+  const effectiveEndDate = nowStr > cycle.endDate ? cycle.endDate : nowStr
+  const validDailyExpenses = transactions.filter((tx) => {
+    const isExpense = tx.type !== 'income'
+    const isNotFixedBill = !tx.isExcludedFromDaily
+    const inRange = tx.date >= cycle.startDate && tx.date <= effectiveEndDate
+    return isExpense && isNotFixedBill && inRange
+  })
+
+  // Step 2: Count unique days with actual spending transactions
+  const activeDaysSet = new Set<string>()
+  let totalValidSpent = 0
+
+  for (const tx of validDailyExpenses) {
+    totalValidSpent += Number(tx.amountVnd) || 0
+    // Normalize date to YYYY-MM-DD
+    const dateKey = tx.date || (tx.transactionDate ? tx.transactionDate.slice(0, 10) : '')
+    if (dateKey) {
+      activeDaysSet.add(dateKey)
+    }
+  }
+
+  const activeSpendingDays = activeDaysSet.size
+
+  // Step 3: Compute average (safely handling activeSpendingDays === 0)
+  const averageDailySpend =
+    activeSpendingDays > 0 ? Math.round(totalValidSpent / activeSpendingDays) : 0
 
   // 6. Standardized 3-State Time Logic:
   // - Quá khứ (date < today): limit = baseDailyLimit (Hạn mức tĩnh gốc), balance = limit - spentOnDay
@@ -215,5 +244,6 @@ export async function getCycleReportData(
     totalExcludedBills,
     totalExtraIncome,
     averageDailySpend,
+    activeSpendingDays,
   }
 }

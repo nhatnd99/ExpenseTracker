@@ -86,7 +86,8 @@ describe('reportService - Dynamic Daily Budget Recalculation (Safe-to-Spend)', (
     // Base daily limit = 3,000,000 / 31 = 96,774đ
     expect(res.baseDailyLimit).toBe(Math.round(3_000_000 / 31))
 
-    // Average daily spend = totalSpentToDate (200k + 300k = 500k, excluding 2M fixed bill) / 2 passed days = 250,000đ
+    // Average daily spend: 500k total daily spent / 2 active spending days (19 & 20 Oct) = 250,000đ
+    expect(res.activeSpendingDays).toBe(2)
     expect(res.averageDailySpend).toBe(250_000)
 
     // 1. Check Past Day (2026-10-19):
@@ -170,7 +171,107 @@ describe('reportService - Dynamic Daily Budget Recalculation (Safe-to-Spend)', (
     expect(day1.spentVnd).toBe(40_000)
     // Remaining budget after day 1 is 300k - 40k = 260k for 30 days = 8,667đ
     expect(day2.dailyLimitVnd).toBe(Math.round(260_000 / 30))
-    // Average daily spend: 40k / 2 passed days = 20,000đ
-    expect(res.averageDailySpend).toBe(20_000)
+    // Average daily spend: only Day 1 had spending (1 active day) -> 40,000 / 1 = 40,000đ (even though 2 days elapsed)
+    expect(res.activeSpendingDays).toBe(1)
+    expect(res.averageDailySpend).toBe(40_000)
+  })
+
+  it('calculates average daily spend accurately deduplicating multiple records on same day and ignoring zero days', async () => {
+    // 5-day cycle: 2026-10-01 to 2026-10-05
+    // Today is Day 5 (2026-10-05) -> 5 days passed
+    // But ONLY Day 2 (2 records: 50k + 50k = 100k) and Day 4 (1 record: 200k) have expenses
+    // Day 1 has Fixed Bill (Rent: 5M, excluded)
+    // Day 3 has Income (Salary: 10M, excluded)
+    const todayStr = '2026-10-05'
+    const monthId = '2026-10'
+    const payDay = 1
+
+    const plan: MonthlyPlan = {
+      id: 'plan-3',
+      month: monthId,
+      incomeVnd: 10_000_000,
+      createdAt: '',
+      updatedAt: '',
+    }
+    const alloc: MonthlyAllocation = {
+      id: 'alloc-3',
+      monthlyPlanId: 'plan-3',
+      categoryId: 'cat-expenses',
+      allocationPercent: 10, // 1,000,000đ Daily Expenses
+      createdAt: '',
+      updatedAt: '',
+    }
+
+    const txDay1Fixed: Transaction = {
+      id: 'tx-fixed-1',
+      monthlyPlanId: 'plan-3',
+      categoryId: 'cat-fixed',
+      amountVnd: 5_000_000,
+      date: '2026-10-01',
+      status: 'cleared',
+      createdAt: '',
+      updatedAt: '',
+      isExcludedFromDaily: true,
+    }
+    const txDay2A: Transaction = {
+      id: 'tx-d2-a',
+      monthlyPlanId: 'plan-3',
+      categoryId: 'cat-expenses',
+      amountVnd: 50_000,
+      date: '2026-10-02',
+      status: 'cleared',
+      createdAt: '',
+      updatedAt: '',
+    }
+    const txDay2B: Transaction = {
+      id: 'tx-d2-b',
+      monthlyPlanId: 'plan-3',
+      categoryId: 'cat-expenses',
+      amountVnd: 50_000,
+      date: '2026-10-02',
+      status: 'cleared',
+      createdAt: '',
+      updatedAt: '',
+    }
+    const txDay3Income: Transaction = {
+      id: 'tx-d3-inc',
+      monthlyPlanId: 'plan-3',
+      categoryId: 'cat-inc-salary',
+      amountVnd: 10_000_000,
+      date: '2026-10-03',
+      status: 'cleared',
+      createdAt: '',
+      updatedAt: '',
+      type: 'income',
+    }
+    const txDay4: Transaction = {
+      id: 'tx-d4',
+      monthlyPlanId: 'plan-3',
+      categoryId: 'cat-expenses',
+      amountVnd: 200_000,
+      date: '2026-10-04',
+      status: 'cleared',
+      createdAt: '',
+      updatedAt: '',
+    }
+
+    vi.spyOn(categoryRepository, 'findAll').mockResolvedValue([])
+    vi.spyOn(monthlyPlanRepository, 'findByMonth').mockResolvedValue(plan)
+    vi.spyOn(allocationRepository, 'findByPlanId').mockResolvedValue([alloc])
+    vi.spyOn(transactionRepository, 'findByDateRange').mockResolvedValue([
+      txDay1Fixed,
+      txDay2A,
+      txDay2B,
+      txDay3Income,
+      txDay4,
+    ])
+
+    const res = await getCycleReportData(monthId, payDay, todayStr)
+
+    // Active days: Day 2 and Day 4 only = 2 active days (Day 1 fixed bill & Day 3 income are ignored)
+    expect(res.activeSpendingDays).toBe(2)
+    // Total valid spent: 50k + 50k + 200k = 300,000đ
+    // Average daily spend: 300,000 / 2 = 150,000đ
+    expect(res.averageDailySpend).toBe(150_000)
   })
 })

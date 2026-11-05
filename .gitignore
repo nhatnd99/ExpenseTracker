@@ -36,3 +36,7 @@ pnpm-debug.log*
 
 # TypeScript
 *.tsbuildinfo
+
+#specification
+specification
+.cursorrules
