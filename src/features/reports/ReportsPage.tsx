@@ -9,12 +9,11 @@ import {
   CalendarRange,
   ChevronLeft,
   ChevronRight,
-  Receipt,
-  Edit3,
-  X,
+  TrendingDown,
+  TrendingUp,
 } from 'lucide-react'
 import { PageContainer } from '@/components/layout/PageContainer'
-import { getTodayString, parseDateString, formatVnd, compareTransactionsDesc, formatTime } from '@/services/dateService'
+import { getTodayString, parseDateString, formatVnd } from '@/services/dateService'
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner'
 import { useSettings } from '@/context/useSettings'
 import { useDynamicBudget } from '@/features/dashboard/hooks/useDynamicBudget'
@@ -25,7 +24,6 @@ import {
   type EnrichedTransaction,
 } from '@/features/transactions/transactionService'
 import { CreateExpenseModal } from '@/features/transactions/components/CreateExpenseModal'
-import { CategoryIconRenderer } from '@/components/ui/CategoryIconRenderer'
 import type { BudgetCategory, DateString } from '@/types/models'
 import { getCycleReportData, type CycleReportData } from './reportService'
 import {
@@ -34,6 +32,8 @@ import {
   getCycleMonthForDate,
   shiftMonthId,
 } from './paydayCycle'
+import type { CalendarDayData } from './types'
+import { DayDetailModal } from './components/DayDetailModal'
 
 export function ReportsPage() {
   const { t, i18n } = useTranslation()
@@ -51,8 +51,8 @@ export function ReportsPage() {
   const [loading, setLoading] = useState<boolean>(true)
 
   // Interactive selection states:
-  // 1. Day details modal (displays records for selected date)
-  const [selectedDateForDetails, setSelectedDateForDetails] = useState<DateString | null>(null)
+  // 1. Selected date for day details modal
+  const [selectedDate, setSelectedDate] = useState<DateString | null>(null)
   // 2. Transaction edit modal (editing a specific expense)
   const [editingTransaction, setEditingTransaction] = useState<EnrichedTransaction | null>(null)
 
@@ -139,12 +139,13 @@ export function ReportsPage() {
   })
   const safeToSpend = dynamicBudget.todayLimit
   const baseDailyLimit = data?.baseDailyLimit ?? (data?.cycle.totalDays ? Math.round(data.progress.budgetVnd / data.cycle.totalDays) : 0)
+  const isAverageSafe = Boolean(data && data.averageDailySpend <= baseDailyLimit)
 
   // 3-State Time Logic Calendar Grid:
-  // 1. Quá khứ: Balance = baseDailyLimit - spentOnThisDay
-  // 2. Hôm nay: Balance = safeToSpend - spentOnThisDay
-  // 3. Tương lai: Balance = safeToSpend (Projection)
-  const calendarDays = useMemo(() => {
+  // 1. Quá khứ: limit = baseDailyLimit (Hạn mức tĩnh gốc), Balance = limit - spentOnThisDay
+  // 2. Hôm nay: limit = safeToSpend (Hạn mức linh hoạt), Balance = limit - spentOnThisDay
+  // 3. Tương lai: limit = safeToSpend, Balance = limit (Projection)
+  const calendarDays: CalendarDayData[] = useMemo(() => {
     if (!data) return []
     const todayDateObj = parseDateString(todayStr)
 
@@ -152,66 +153,45 @@ export function ReportsPage() {
       const dayNumber = parseInt(date.slice(8), 10)
       const cellDateObj = parseDateString(date)
 
-      // Group spent strictly excluding fixed bills (isExcludedFromDaily)
-      const spentVnd = data.dailySpentMap[date] || 0
+      // Group spent strictly excluding fixed bills (isExcludedFromDaily) and income
+      const spent = data.dailySpentMap[date] || 0
 
       const isPast = isBefore(cellDateObj, todayDateObj)
       const isToday = isSameDay(cellDateObj, todayDateObj)
       const isFuture = isAfter(cellDateObj, todayDateObj)
 
-      let balanceVnd: number
+      let limit: number
+      let balance: number
+
       if (isPast) {
-        balanceVnd = baseDailyLimit - spentVnd
+        limit = baseDailyLimit
+        balance = limit - spent
       } else if (isToday) {
-        balanceVnd = safeToSpend - spentVnd
+        limit = safeToSpend
+        balance = limit - spent
       } else {
-        balanceVnd = safeToSpend
+        limit = safeToSpend
+        balance = limit
       }
 
       return {
         date,
         dayNumber,
-        spentVnd,
-        balanceVnd,
+        limit,
+        spent,
+        balance,
         isToday,
+        isPast,
         isFuture,
       }
     })
   }, [data, todayStr, baseDailyLimit, safeToSpend])
 
-  // Transactions list for the selected day in the details sheet
-  const selectedDayTransactions = useMemo(() => {
-    if (!data || !selectedDateForDetails) return []
-    return data.transactions
-      .filter((tx) => tx.date === selectedDateForDetails)
-      .sort(compareTransactionsDesc)
-  }, [data, selectedDateForDetails])
-
-  // Daily expenses on selected day (excluding fixed bills)
-  const selectedDayDailySpent = useMemo(() => {
-    return selectedDayTransactions
-      .filter((tx) => !tx.isExcludedFromDaily)
-      .reduce((sum, tx) => sum + tx.amountVnd, 0)
-  }, [selectedDayTransactions])
-
-  // Excluded fixed bills on selected day
-  const selectedDayExcludedBills = useMemo(() => {
-    return selectedDayTransactions
-      .filter((tx) => Boolean(tx.isExcludedFromDaily))
-      .reduce((sum, tx) => sum + tx.amountVnd, 0)
-  }, [selectedDayTransactions])
-
-  // Formatted label for selected day header (e.g. "31/10/2026")
-  const formattedSelectedDay = useMemo(() => {
-    if (!selectedDateForDetails) return ''
-    const localeCode = i18n.language === 'vi' ? 'vi-VN' : 'en-US'
-    return new Intl.DateTimeFormat(localeCode, {
-      weekday: 'short',
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-    }).format(parseDateString(selectedDateForDetails))
-  }, [selectedDateForDetails, i18n.language])
+  // Single Source of Truth: derive selected day's calculated data directly from calendarDays
+  const selectedDayData = useMemo(() => {
+    if (!selectedDate) return null
+    return calendarDays.find((d) => d.date === selectedDate) ?? null
+  }, [calendarDays, selectedDate])
 
   // Save changes to an existing expense transaction
   const handleUpdateExpense = async (formData: {
@@ -354,34 +334,34 @@ export function ReportsPage() {
               </div>
 
               {/* 3-Column Stats: Budget | Total Spent | Remaining */}
-              <div className="grid grid-cols-3 gap-1 sm:gap-2 divide-x divide-[var(--color-border)] pt-1">
+              <div className="grid grid-cols-3 gap-1 divide-x divide-[var(--color-border)] pt-1">
                 {/* Column 1: Budget */}
                 <div className="text-center px-1 min-w-0">
-                  <span className="block text-[10px] font-bold uppercase tracking-wider text-[var(--color-text-muted)] truncate">
+                  <span className="block text-[10px] sm:text-xs font-bold uppercase tracking-tighter text-[var(--color-text-muted)] leading-tight whitespace-normal">
                     {t('reports.budget', 'Hạn Mức')}
                   </span>
-                  <p className="mt-1 text-sm sm:text-base font-extrabold amount-display text-[var(--color-text-primary)] truncate">
+                  <p className="mt-1 text-xs sm:text-base font-extrabold amount-display text-[var(--color-text-primary)] leading-tight whitespace-normal break-all sm:break-normal">
                     {formatVnd(data.progress.budgetVnd)}
                   </p>
                 </div>
 
                 {/* Column 2: Total Spent */}
                 <div className="text-center px-1 min-w-0">
-                  <span className="block text-[10px] font-bold uppercase tracking-wider text-[var(--color-text-muted)] truncate">
+                  <span className="block text-[10px] sm:text-xs font-bold uppercase tracking-tighter text-[var(--color-text-muted)] leading-tight whitespace-normal">
                     {t('reports.totalSpent', 'Đã Chi')}
                   </span>
-                  <p className="mt-1 text-sm sm:text-base font-extrabold amount-display text-[var(--color-expense)] truncate">
+                  <p className="mt-1 text-xs sm:text-base font-extrabold amount-display text-[var(--color-expense)] leading-tight whitespace-normal break-all sm:break-normal">
                     {formatVnd(data.progress.totalSpentVnd)}
                   </p>
                 </div>
 
                 {/* Column 3: Remaining */}
                 <div className="text-center px-1 min-w-0">
-                  <span className="block text-[10px] font-bold uppercase tracking-wider text-[var(--color-text-muted)] truncate">
+                  <span className="block text-[10px] sm:text-xs font-bold uppercase tracking-tighter text-[var(--color-text-muted)] leading-tight whitespace-normal">
                     {t('reports.remaining', 'Còn Lại')}
                   </span>
                   <p
-                    className={`mt-1 text-sm sm:text-base font-extrabold amount-display truncate ${
+                    className={`mt-1 text-xs sm:text-base font-extrabold amount-display leading-tight whitespace-normal break-all sm:break-normal ${
                       data.progress.remainingVnd < 0
                         ? 'text-[var(--color-expense)]'
                         : data.progress.remainingVnd > 0
@@ -427,6 +407,29 @@ export function ReportsPage() {
                   </div>
                 </div>
               )}
+              {/* Average Daily Spend Stat with Dynamic Warning Color */}
+              <div className="pt-2 border-t border-[var(--color-border)] flex items-center justify-between text-xs">
+                <span className="text-[11px] font-semibold text-[var(--color-text-muted)] flex items-center gap-1.5 min-w-0">
+                  {isAverageSafe ? (
+                    <TrendingDown className="h-3.5 w-3.5 text-green-500 dark:text-green-400 shrink-0" />
+                  ) : (
+                    <TrendingUp className="h-3.5 w-3.5 text-red-500 dark:text-red-400 shrink-0" />
+                  )}
+                  <span className="truncate">{t('reports.averageDailySpend', 'Trung bình chi tiêu ngày')}:</span>
+                </span>
+                <span
+                  className={`text-xs sm:text-sm font-extrabold amount-display shrink-0 pl-2 ${
+                    isAverageSafe
+                      ? 'text-green-600 dark:text-green-400'
+                      : 'text-red-600 dark:text-red-400'
+                  }`}
+                >
+                  {formatVnd(data.averageDailySpend)}
+                  <span className="text-[10px] sm:text-xs font-semibold text-[var(--color-text-muted)] ml-1">
+                    {t('reports.perDay', '/ngày')}
+                  </span>
+                </span>
+              </div>
             </div>
 
             {/* 2. Interactive Calendar Grid View */}
@@ -474,9 +477,9 @@ export function ReportsPage() {
 
                 {/* Daily Item Cells - Interactive with onClick */}
                 {calendarDays.map((day) => {
-                  const hasSpent = day.spentVnd > 0
-                  const isPositiveBalance = day.balanceVnd >= 0
-                  const isSelected = selectedDateForDetails === day.date
+                  const hasSpent = day.spent > 0
+                  const isPositiveBalance = day.balance >= 0
+                  const isSelected = selectedDate === day.date
 
                   const cellClasses = isSelected
                     ? 'border-[var(--color-primary)] ring-2 ring-[var(--color-primary)] bg-[var(--color-primary-soft)]'
@@ -490,7 +493,7 @@ export function ReportsPage() {
                     <button
                       key={day.date}
                       type="button"
-                      onClick={() => setSelectedDateForDetails(day.date)}
+                      onClick={() => setSelectedDate(day.date)}
                       className={`flex flex-col justify-between h-full min-h-[62px] sm:min-h-[70px] p-1 sm:p-1.5 rounded-2xl border transition-all overflow-hidden min-w-0 cursor-pointer active:scale-95 text-left box-border ${cellClasses}`}
                     >
                       {/* Top: Day number (Căn góc trái trên cùng self-start, font bold) */}
@@ -515,7 +518,7 @@ export function ReportsPage() {
                       <div className="flex-1 flex items-center justify-center w-full min-w-0 my-0.5">
                         {hasSpent ? (
                           <span className="block text-[10px] sm:text-xs font-medium amount-display text-[var(--color-expense)] truncate leading-none text-center">
-                            -{formatCompactVnd(day.spentVnd)}
+                            -{formatCompactVnd(day.spent)}
                           </span>
                         ) : (
                           <span className="block text-[10px] text-gray-400/50 dark:text-gray-600 font-normal leading-none select-none">
@@ -537,8 +540,8 @@ export function ReportsPage() {
                             }`}
                           >
                             {isPositiveBalance
-                              ? `+${formatCompactVnd(day.balanceVnd)}`
-                              : `-${formatCompactVnd(Math.abs(day.balanceVnd))}`}
+                              ? `+${formatCompactVnd(day.balance)}`
+                              : `-${formatCompactVnd(Math.abs(day.balance))}`}
                           </span>
                         ) : (
                           <span className="block text-[8px] text-[var(--color-text-muted)] truncate leading-none opacity-40">
@@ -575,121 +578,14 @@ export function ReportsPage() {
         )}
       </div>
 
-      {/* Day Details Bottom Sheet Modal */}
-      {selectedDateForDetails && (
-        <div className="fixed inset-0 z-40 flex flex-col justify-end bg-black/60 backdrop-blur-xs overflow-hidden">
-          <div className="w-full max-w-lg mx-auto rounded-t-3xl border-t border-[var(--color-border)] bg-[var(--color-bg-surface)] shadow-2xl flex flex-col max-h-[85dvh] h-auto overflow-hidden animate-in fade-in-0 slide-in-from-bottom duration-200">
-            {/* Header - Fixed */}
-            <div className="shrink-0 flex items-center justify-between px-5 pt-4 pb-3 border-b border-[var(--color-border)]">
-              <div>
-                <h3 className="text-sm font-bold text-[var(--color-text-primary)]">
-                  {t('reports.dayDetailsTitle', 'Chi Tiêu Ngày')} {formattedSelectedDay}
-                </h3>
-                <p className="text-xs text-[var(--color-text-muted)] mt-0.5">
-                  {t('reports.dayTotalSpent', 'Tổng chi trong ngày')}:{' '}
-                  <span className="font-extrabold text-[var(--color-expense)] amount-display">
-                    {formatVnd(selectedDayDailySpent)}
-                  </span>
-                </p>
-                {selectedDayExcludedBills > 0 && (
-                  <p className="text-[11px] text-[var(--color-primary)] mt-0.5 font-medium flex items-center gap-1">
-                    <Receipt className="h-3 w-3 shrink-0" />
-                    <span>{t('transactions.billsToday', 'Hóa đơn lớn')}: {formatVnd(selectedDayExcludedBills)}</span>
-                  </p>
-                )}
-              </div>
-              <button
-                type="button"
-                onClick={() => setSelectedDateForDetails(null)}
-                className="flex h-8 w-8 items-center justify-center rounded-xl text-[var(--color-text-muted)] hover:bg-[var(--color-bg-subtle)] hover:text-[var(--color-text-primary)] cursor-pointer"
-                aria-label={t('common.cancel', 'Đóng')}
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-
-            {/* Content List of Transactions on Selected Day */}
-            <div className="flex-1 overflow-y-auto overflow-x-hidden p-4 space-y-2 overscroll-y-contain">
-              {selectedDayTransactions.length === 0 ? (
-                <div className="py-12 text-center space-y-2">
-                  <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-[var(--color-bg-subtle)] text-[var(--color-text-muted)]">
-                    <Receipt className="h-6 w-6" />
-                  </div>
-                  <p className="text-sm font-semibold text-[var(--color-text-primary)]">
-                    {t('transactions.noTransactionsForDay', 'Chưa có khoản chi nào trong ngày này')}
-                  </p>
-                </div>
-              ) : (
-                <>
-                  <div className="flex items-center justify-between text-[11px] font-semibold text-[var(--color-text-muted)] px-1">
-                    <span>
-                      {t('transactions.expensesListTitle', {
-                        count: selectedDayTransactions.length,
-                        defaultValue: `Khoản chi (${selectedDayTransactions.length})`,
-                      })}
-                    </span>
-                    <span>{t('transactions.tapToEdit', 'Chạm để xem & sửa')}</span>
-                  </div>
-
-                  {selectedDayTransactions.map((tx) => (
-                    <div
-                      key={tx.id}
-                      onClick={() => setEditingTransaction(tx)}
-                      className="flex items-center justify-between rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg-surface)] p-3 hover:border-[var(--color-primary)] active:scale-[0.99] cursor-pointer transition-all shadow-2xs"
-                      role="button"
-                      tabIndex={0}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter' || e.key === ' ') {
-                          setEditingTransaction(tx)
-                        }
-                      }}
-                    >
-                      <div className="flex items-center gap-3 min-w-0">
-                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[var(--color-bg-subtle)] text-[var(--color-primary)] border border-[var(--color-border)] shadow-2xs">
-                          <CategoryIconRenderer icon={tx.categoryIcon} size={18} />
-                        </div>
-                        <div className="min-w-0">
-                          <p className="text-xs font-bold text-[var(--color-text-primary)] truncate">
-                            {tx.categoryName}
-                          </p>
-                          <p className="text-[11px] text-[var(--color-text-muted)] truncate flex items-center gap-1">
-                            {formatTime(tx.transactionDate || tx.createdAt) && (
-                              <span className="font-mono text-[10px] text-[var(--color-text-muted)] shrink-0">
-                                {formatTime(tx.transactionDate || tx.createdAt)} •
-                              </span>
-                            )}
-                            <span className="truncate">
-                              {tx.description || `${t('transactions.dateLabel', 'Ngày')}: ${tx.date}`}
-                            </span>
-                          </p>
-                        </div>
-                      </div>
-
-                      <div className="flex items-center gap-2 shrink-0 pl-2">
-                        <span className="text-xs font-bold text-[var(--color-expense)] amount-display">
-                          -{formatVnd(tx.amountVnd)}
-                        </span>
-                        <Edit3 className="h-3.5 w-3.5 text-[var(--color-text-muted)]" />
-                      </div>
-                    </div>
-                  ))}
-                </>
-              )}
-            </div>
-
-            {/* Bottom Sheet Footer */}
-            <div className="shrink-0 p-3 border-t border-[var(--color-border)] pb-[max(0.5rem,env(safe-area-inset-bottom,0px))]">
-              <button
-                type="button"
-                onClick={() => setSelectedDateForDetails(null)}
-                className="w-full rounded-2xl bg-[var(--color-bg-subtle)] border border-[var(--color-border)] py-2.5 text-xs font-bold text-[var(--color-text-primary)] hover:bg-[var(--color-border)] cursor-pointer"
-              >
-                {t('common.cancel', 'Đóng')}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Day Details Bottom Sheet Modal (Single Source of Truth) */}
+      <DayDetailModal
+        dayData={selectedDayData}
+        transactions={data?.transactions ?? []}
+        budgetVnd={data?.progress.budgetVnd ?? 0}
+        onClose={() => setSelectedDate(null)}
+        onEditTransaction={(tx) => setEditingTransaction(tx)}
+      />
 
       {/* Expense Edit Modal */}
       {editingTransaction && (

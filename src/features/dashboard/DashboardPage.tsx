@@ -18,10 +18,9 @@ import {
 import { PageContainer } from '@/components/layout/PageContainer'
 import { useSettings } from '@/context/useSettings'
 import { getDashboardData, type DashboardData } from './dashboardService'
-import { formatVnd, getTodayString, formatTime } from '@/services/dateService'
+import { formatVnd, getTodayString } from '@/services/dateService'
 import { getCycleMonthForDate } from '@/features/reports/paydayCycle'
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner'
-import { CategoryIconRenderer } from '@/components/ui/CategoryIconRenderer'
 import { useDynamicBudget } from './hooks/useDynamicBudget'
 
 export function DashboardPage() {
@@ -103,7 +102,7 @@ export function DashboardPage() {
     )
   }
 
-  const { summary, todayStatus, recentTransactions } = data
+  const { summary, todayStatus } = data
   const percentSpent = summary.totalExpenseBudgetVnd > 0
     ? Math.min(100, Math.round((summary.totalSpentVnd / summary.totalExpenseBudgetVnd) * 100))
     : 0
@@ -187,15 +186,15 @@ export function DashboardPage() {
         {/* Dynamic Safe-to-Spend Dashboard Card (Cohesive 3-Column Layout matching Expenses Daily Budget) */}
         <div className="rounded-3xl border border-[var(--color-border)] bg-[var(--color-bg-surface)] p-4 sm:p-5 shadow-2xs transition-colors space-y-3.5">
           {/* Card Top: Title & Status Indicator */}
-          <div className="flex items-center justify-between text-xs">
-            <div className="flex items-center gap-1.5 font-bold uppercase tracking-wider text-[var(--color-text-muted)] text-[11px]">
+          <div className="flex items-center justify-between gap-2 text-xs">
+            <div className="flex items-center gap-1.5 font-bold uppercase tracking-wider text-[var(--color-text-muted)] text-[11px] min-w-0">
               <Sparkles className="h-4 w-4 text-[var(--color-primary)] shrink-0" />
-              <span>{t('dashboard.safeToSpendToday', 'Hôm nay bạn có thể tiêu')}</span>
+              <span className="leading-tight">{t('dashboard.safeToSpendToday', 'Hôm nay bạn có thể tiêu')}</span>
             </div>
 
             {/* Status Badge */}
             <span
-              className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold ${
+              className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold shrink-0 ${
                 dynamicBudget.isOnTrack
                   ? 'bg-[var(--color-income-soft)] text-[var(--color-income)] border border-[var(--color-income-border)]'
                   : 'bg-[var(--color-expense-soft)] text-[var(--color-expense)] border border-[var(--color-expense-border)]'
@@ -217,14 +216,14 @@ export function DashboardPage() {
 
           {/* Hero Safe-to-Spend Amount */}
           <div>
-            <p className="text-3xl sm:text-4xl font-extrabold text-[var(--color-text-primary)] amount-display tracking-tight">
+            <p className="text-3xl sm:text-4xl font-extrabold text-[var(--color-text-primary)] amount-display tracking-tight leading-none">
               {formatVnd(dynamicBudget.todayLimit)}
             </p>
           </div>
 
           {/* Pace / Rollover Banner */}
           <div
-            className={`flex items-center gap-2.5 rounded-2xl p-2.5 sm:p-3 text-xs font-semibold border ${
+            className={`flex items-center gap-2.5 rounded-2xl p-2.5 sm:p-3 text-xs font-semibold border leading-snug whitespace-normal ${
               dynamicBudget.paceBalance > 0
                 ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
                 : dynamicBudget.paceBalance < 0
@@ -235,7 +234,7 @@ export function DashboardPage() {
             {dynamicBudget.paceBalance > 0 ? (
               <>
                 <TrendingUp className="h-4 w-4 shrink-0" />
-                <span>
+                <span className="whitespace-normal leading-tight">
                   {t(
                     'dashboard.paceAhead',
                     'Tuyệt vời! Bạn đang tiết kiệm được {{amount}} so với tiến độ',
@@ -246,7 +245,7 @@ export function DashboardPage() {
             ) : dynamicBudget.paceBalance < 0 ? (
               <>
                 <TrendingDown className="h-4 w-4 shrink-0" />
-                <span>
+                <span className="whitespace-normal leading-tight">
                   {t(
                     'dashboard.paceBehind',
                     'Chú ý! Bạn đang tiêu lố {{amount}}, hãy thắt chặt chi tiêu',
@@ -257,30 +256,30 @@ export function DashboardPage() {
             ) : (
               <>
                 <CheckCircle2 className="h-4 w-4 shrink-0" />
-                <span>{t('dashboard.paceOnTrack', 'Tuyệt vời! Bạn đang chi tiêu đúng tiến độ kế hoạch')}</span>
+                <span className="whitespace-normal leading-tight">{t('dashboard.paceOnTrack', 'Tuyệt vời! Bạn đang chi tiêu đúng tiến độ kế hoạch')}</span>
               </>
             )}
           </div>
 
-          {/* 3 Columns: Today's Spent | Remaining Monthly Budget | Remaining Days (Same layout as Expenses Daily Budget) */}
-          <div className="grid grid-cols-3 gap-1 sm:gap-2 divide-x divide-[var(--color-border)] pt-3 border-t border-[var(--color-border)]">
+          {/* 3 Columns: Today's Spent | Remaining Monthly Budget | Remaining Days */}
+          <div className="grid grid-cols-3 gap-1 divide-x divide-[var(--color-border)] pt-3 border-t border-[var(--color-border)]">
             {/* Col 1: Today's Spent */}
             <div className="text-center px-1 min-w-0">
-              <span className="block text-[10px] font-bold uppercase tracking-wider text-[var(--color-text-muted)] truncate">
+              <span className="block text-[10px] sm:text-xs font-bold uppercase tracking-tighter text-[var(--color-text-muted)] leading-tight whitespace-normal text-center">
                 {t('dashboard.todaySpent', 'Hôm Nay Đã Tiêu')}
               </span>
-              <p className="mt-1 text-sm sm:text-base font-extrabold amount-display text-[var(--color-expense)] truncate">
+              <p className="mt-1 text-xs sm:text-base font-extrabold amount-display text-[var(--color-expense)] leading-tight whitespace-normal break-all sm:break-normal text-center">
                 {formatVnd(todayStatus?.spentVnd ?? 0)}
               </p>
             </div>
 
             {/* Col 2: Remaining Monthly Budget */}
             <div className="text-center px-1 min-w-0">
-              <span className="block text-[10px] font-bold uppercase tracking-wider text-[var(--color-text-muted)] truncate">
+              <span className="block text-[10px] sm:text-xs font-bold uppercase tracking-tighter text-[var(--color-text-muted)] leading-tight whitespace-normal text-center">
                 {t('dashboard.remainingMonthBudget', 'Quỹ Tháng Còn Lại')}
               </span>
               <p
-                className={`mt-1 text-sm sm:text-base font-extrabold amount-display truncate ${
+                className={`mt-1 text-xs sm:text-base font-extrabold amount-display leading-tight whitespace-normal break-all sm:break-normal text-center ${
                   dynamicBudget.remainingBudget <= 0
                     ? 'text-[var(--color-expense)]'
                     : 'text-[var(--color-income)]'
@@ -292,10 +291,10 @@ export function DashboardPage() {
 
             {/* Col 3: Remaining Days */}
             <div className="text-center px-1 min-w-0">
-              <span className="block text-[10px] font-bold uppercase tracking-wider text-[var(--color-text-muted)] truncate">
+              <span className="block text-[10px] sm:text-xs font-bold uppercase tracking-tighter text-[var(--color-text-muted)] leading-tight whitespace-normal text-center">
                 {t('dashboard.remainingDays', 'Số Ngày Còn Lại')}
               </span>
-              <p className="mt-1 text-sm sm:text-base font-extrabold text-[var(--color-text-primary)] font-mono truncate">
+              <p className="mt-1 text-xs sm:text-base font-extrabold text-[var(--color-text-primary)] font-mono leading-tight whitespace-normal text-center">
                 <span className="text-[var(--color-primary)] font-black">{dynamicBudget.remainingDays}</span> {t('common.days', 'ngày')}
               </p>
             </div>
@@ -318,64 +317,6 @@ export function DashboardPage() {
             <SlidersHorizontal className="h-4 w-4 text-[var(--color-text-secondary)]" />
             <span className="text-sm">{t('dashboard.manageBudget')}</span>
           </Link>
-        </div>
-
-        {/* Recent Transactions */}
-        <div className="rounded-3xl border border-[var(--color-border)] bg-[var(--color-bg-surface)] p-5 shadow-2xs transition-colors space-y-3">
-          <div className="flex items-center justify-between">
-            <h3 className="text-sm font-bold text-[var(--color-text-primary)]">
-              {t('dashboard.recentExpenses')}
-            </h3>
-            <Link
-              to="/transactions"
-              className="text-xs font-semibold text-[var(--color-primary)] hover:underline"
-            >
-              {t('dashboard.viewAll')} →
-            </Link>
-          </div>
-
-          {recentTransactions.length === 0 ? (
-            <div className="py-6 text-center">
-              <Receipt className="mx-auto h-8 w-8 text-[var(--color-text-muted)]" />
-              <p className="mt-2 text-xs text-[var(--color-text-muted)]">
-                {t('dashboard.noExpensesYet')}
-              </p>
-            </div>
-          ) : (
-            <div className="divide-y divide-[var(--color-border)]">
-              {recentTransactions.map((tx) => (
-                <div key={tx.id} className="flex items-center justify-between py-2.5">
-                  <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[var(--color-bg-subtle)] text-[var(--color-primary)] border border-[var(--color-border)] shadow-2xs">
-                      <CategoryIconRenderer icon={tx.categoryIcon} size={18} />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="text-xs font-bold text-[var(--color-text-primary)] truncate">
-                        {tx.categoryName}
-                      </p>
-                      <p className="text-[11px] text-[var(--color-text-muted)] truncate flex items-center gap-1">
-                        <span>{tx.date}</span>
-                        {formatTime(tx.transactionDate || tx.createdAt) && (
-                          <span className="font-mono text-[10px] text-[var(--color-text-muted)] shrink-0">
-                            {formatTime(tx.transactionDate || tx.createdAt)}
-                          </span>
-                        )}
-                        {tx.description && <span className="truncate">• {tx.description}</span>}
-                      </p>
-                    </div>
-                  </div>
-                  <span
-                    className={`text-xs font-bold amount-display ${
-                      tx.type === 'income' ? 'text-[var(--color-income)]' : 'text-[var(--color-expense)]'
-                    }`}
-                  >
-                    {tx.type === 'income' ? '+' : '-'}
-                    {formatVnd(tx.amountVnd)}
-                  </span>
-                </div>
-              ))}
-            </div>
-          )}
         </div>
       </div>
     </PageContainer>

@@ -392,36 +392,36 @@ export function TransactionsPage() {
           </div>
 
           {/* 3 Columns: Daily Limit | Total Spent | Remaining Balance */}
-          <div className="grid grid-cols-3 gap-1 sm:gap-2 divide-x divide-[var(--color-border)] pt-0.5">
+          <div className="grid grid-cols-3 gap-1 divide-x divide-[var(--color-border)] pt-0.5">
             {/* Col 1: Daily Limit */}
             <div className="text-center px-1 min-w-0">
-              <span className="block text-[10px] font-bold uppercase tracking-wider text-[var(--color-text-muted)] truncate">
+              <span className="block text-[10px] sm:text-xs font-bold uppercase tracking-tighter text-[var(--color-text-muted)] leading-tight whitespace-normal">
                 {isDateToday
-                  ? t('transactions.safeToSpend', 'Có Thể Tiêu')
-                  : t('transactions.standardDailyLimit', 'Hạn Mức')}
+                  ? t('transactions.safeToSpend', 'Ngân Sách')
+                  : t('transactions.standardDailyLimit', 'Ngân Sách')}
               </span>
-              <p className="mt-1 text-sm sm:text-base font-extrabold amount-display text-[var(--color-text-primary)] truncate">
+              <p className="mt-1 text-xs sm:text-base font-extrabold amount-display text-[var(--color-text-primary)] leading-tight whitespace-normal break-all sm:break-normal">
                 {formatVnd(effectiveDailyLimit)}
               </p>
             </div>
 
             {/* Col 2: Total Spent */}
             <div className="text-center px-1 min-w-0">
-              <span className="block text-[10px] font-bold uppercase tracking-wider text-[var(--color-text-muted)] truncate">
-                {t('transactions.totalSpent', 'Đã Tiêu')}
+              <span className="block text-[10px] sm:text-xs font-bold uppercase tracking-tighter text-[var(--color-text-muted)] leading-tight whitespace-normal">
+                {t('transactions.totalSpent', 'Đã Chi')}
               </span>
-              <p className="mt-1 text-sm sm:text-base font-extrabold amount-display text-[var(--color-expense)] truncate">
+              <p className="mt-1 text-xs sm:text-base font-extrabold amount-display text-[var(--color-expense)] leading-tight whitespace-normal break-all sm:break-normal">
                 {formatVnd(totalDailySpent)}
               </p>
             </div>
 
             {/* Col 3: Remaining Balance */}
             <div className="text-center px-1 min-w-0">
-              <span className="block text-[10px] font-bold uppercase tracking-wider text-[var(--color-text-muted)] truncate">
+              <span className="block text-[10px] sm:text-xs font-bold uppercase tracking-tighter text-[var(--color-text-muted)] leading-tight whitespace-normal">
                 {t('transactions.remainingBalance', 'Còn Lại')}
               </span>
               <p
-                className={`mt-1 text-sm sm:text-base font-extrabold amount-display truncate ${
+                className={`mt-1 text-xs sm:text-base font-extrabold amount-display leading-tight whitespace-normal break-all sm:break-normal ${
                   isOverBudget
                     ? 'text-[var(--color-expense)]'
                     : remainingBalance > 0
