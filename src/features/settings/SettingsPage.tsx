@@ -147,6 +147,16 @@ export function SettingsPage() {
   const [paydaySaveSuccess, setPaydaySaveSuccess] = useState<boolean>(false)
 
   // Load monthly plan and saved fixed bills
+  interface InitialBudgetValues {
+    income: number
+    payDay: number
+    dailyPercent: number
+    savingsPercent: number
+    fixedBillsPercent: number
+    customItems: { id: string; percent: number; name: string }[]
+  }
+  const [initialValues, setInitialValues] = useState<InitialBudgetValues | null>(null)
+
   useEffect(() => {
     let active = true
 
@@ -196,9 +206,25 @@ export function SettingsPage() {
           const fixedP = fixedAlloc ? fixedAlloc.allocationPercent : 30
 
           initializeFromPlan(dailyP, savingsP, loadedCustoms, fixedP)
+          setInitialValues({
+            income: inc,
+            payDay,
+            dailyPercent: dailyP,
+            savingsPercent: savingsP,
+            fixedBillsPercent: fixedP,
+            customItems: loadedCustoms.map((c) => ({ id: c.id, percent: c.percent, name: c.name })),
+          })
         } else {
           setIncome(10_000_000)
           initializeFromPlan(50, 20, [], 30)
+          setInitialValues({
+            income: 10_000_000,
+            payDay,
+            dailyPercent: 50,
+            savingsPercent: 20,
+            fixedBillsPercent: 30,
+            customItems: [],
+          })
         }
       })
       .catch((err) => {
@@ -212,7 +238,41 @@ export function SettingsPage() {
     return () => {
       active = false
     }
-  }, [currentCycleMonth, t, initializeFromPlan, setFixedBills, setMonthlyIncome, setBudgetPlan])
+  }, [currentCycleMonth, t, initializeFromPlan, setFixedBills, setMonthlyIncome, setBudgetPlan, payDay])
+
+  // ── Dirty State Checking (hasChanges / isDirty) ──
+  const hasChanges = useMemo(() => {
+    if (!initialValues) return false
+
+    // 1. Monthly Income comparison
+    const incomeChanged = Math.round(Number(income) || 0) !== Math.round(Number(initialValues.income) || 0)
+
+    // 2. Cycle Start Day (Payday) comparison
+    const paydayChanged = Number(selectedPayDay) !== Number(initialValues.payDay)
+
+    // 3. Allocations (Daily Expenses, Savings, Fixed Bills) comparison
+    const dailyChanged = dailyPercent !== initialValues.dailyPercent
+    const savingsChanged = savingsPercent !== initialValues.savingsPercent
+    const fixedBillsChanged = fixedBillsPercent !== initialValues.fixedBillsPercent
+
+    // 4. Custom Categories comparison
+    const customsChanged =
+      customItems.length !== initialValues.customItems.length ||
+      customItems.some((item) => {
+        const initial = initialValues.customItems.find((c) => c.id === item.id)
+        return !initial || initial.percent !== item.percent || initial.name.trim() !== item.name.trim()
+      })
+
+    return incomeChanged || paydayChanged || dailyChanged || savingsChanged || fixedBillsChanged || customsChanged
+  }, [
+    initialValues,
+    income,
+    selectedPayDay,
+    dailyPercent,
+    savingsPercent,
+    fixedBillsPercent,
+    customItems,
+  ])
 
   // Formatted income input display
   const formattedIncome = useMemo(() => {
@@ -306,6 +366,10 @@ export function SettingsPage() {
         true,
       )
 
+      if (selectedPayDay !== payDay) {
+        setPayDay(selectedPayDay)
+      }
+
       setMonthlyIncome(safeIncome)
       setBudgetPlan({
         month: currentCycleMonth,
@@ -315,6 +379,16 @@ export function SettingsPage() {
 
       // 4. Refresh global Daily Limit state in SettingsContext for Dashboard & Report
       await refreshDailyLimit()
+
+      // Reset dirty state to current saved values
+      setInitialValues({
+        income: safeIncome,
+        payDay: selectedPayDay,
+        dailyPercent,
+        savingsPercent,
+        fixedBillsPercent,
+        customItems: customItems.map((c) => ({ id: c.id, percent: c.percent, name: c.name })),
+      })
 
       setBudgetSaveSuccess(true)
       setTimeout(() => setBudgetSaveSuccess(false), 3000)
@@ -328,6 +402,7 @@ export function SettingsPage() {
   // Handle Save Payday Independently (Independent Action)
   const handleSavePayday = () => {
     setPayDay(selectedPayDay)
+    setInitialValues((prev) => (prev ? { ...prev, payDay: selectedPayDay } : null))
     setPaydaySaveSuccess(true)
     setTimeout(() => setPaydaySaveSuccess(false), 3000)
   }
@@ -401,33 +476,33 @@ export function SettingsPage() {
                       CATEGORY 1: Daily Expenses (Mandatory Default)
                       =================================================== */}
                   <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg-subtle)] p-3.5 space-y-2.5 box-border">
-                    <div className="flex items-center justify-between gap-2">
-                      <div className="flex items-center gap-2 min-w-0 flex-1">
-                        <div className="p-1 shrink-0 text-[var(--color-text-muted)]" title={t('plan.defaultLocked', 'Hạng mục mặc định')}>
-                          <Lock className="h-3.5 w-3.5" />
-                        </div>
-                        <span className="flex h-7 w-7 items-center justify-center rounded-xl bg-[var(--color-bg-surface)] text-sm shadow-2xs shrink-0 text-[var(--color-primary)]">
-                          <CategoryIconRenderer icon="🛒" size={16} />
-                        </span>
-                        <div className="min-w-0 flex-1 flex items-center gap-1.5 flex-wrap">
-                          <span className="font-bold text-xs text-[var(--color-text-primary)] truncate">
+                    <div className="flex flex-row items-start gap-2.5 sm:gap-3 w-full">
+                      <div className="p-1 shrink-0 text-[var(--color-text-muted)] mt-0.5" title={t('plan.defaultLocked', 'Hạng mục mặc định')}>
+                        <Lock className="h-3.5 w-3.5" />
+                      </div>
+                      <span className="flex h-7 w-7 items-center justify-center rounded-xl bg-[var(--color-bg-surface)] text-sm shadow-2xs shrink-0 text-[var(--color-primary)]">
+                        <CategoryIconRenderer icon="🛒" size={16} />
+                      </span>
+                      <div className="flex-1 min-w-0 flex flex-col items-start gap-2">
+                        <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+                          <span className="font-bold text-xs text-[var(--color-text-primary)] whitespace-normal break-words">
                             {t('plan.cat_expenses', 'Chi Tiêu Hàng Ngày (Daily Expenses)')}
                           </span>
                           <span className="text-[10px] font-bold text-[var(--color-primary)] bg-[var(--color-primary-soft)] px-1.5 py-0.5 rounded-md shrink-0 border border-[var(--color-primary)]/20">
                             {t('plan.defaultCategory', 'Mặc định')}
                           </span>
                         </div>
-                      </div>
 
-                      {/* Percentage Input with Up/Down buttons */}
-                      <PercentageInput
-                        value={dailyPercent}
-                        onChange={setDailyPercent}
-                        ariaLabel="Daily Expenses Percent"
-                      />
+                        {/* Percentage Controls aligned left with text */}
+                        <PercentageInput
+                          value={dailyPercent}
+                          onChange={setDailyPercent}
+                          ariaLabel="Daily Expenses Percent"
+                        />
+                      </div>
                     </div>
 
-                    <div className="flex items-center justify-between pt-1 border-t border-[var(--color-border)]/60 text-xs">
+                    <div className="flex items-center justify-between pt-2 border-t border-[var(--color-border)]/60 text-xs">
                       <span className="text-[11px] text-[var(--color-text-muted)]">
                         {t('plan.allocatedAmount', 'Số tiền phân bổ')}:
                       </span>
@@ -452,37 +527,37 @@ export function SettingsPage() {
                     }}
                     className="rounded-2xl border-2 border-[var(--color-primary)]/30 bg-[var(--color-bg-surface)] p-3.5 space-y-2.5 box-border cursor-pointer hover:border-[var(--color-primary)] transition-all active:scale-[0.99] shadow-2xs group"
                   >
-                    <div className="flex items-center justify-between gap-2">
-                      <div className="flex items-center gap-2 min-w-0 flex-1">
-                        <div className="p-1 shrink-0 text-[var(--color-text-muted)]" title={t('plan.defaultLocked', 'Hạng mục mặc định')}>
-                          <Lock className="h-3.5 w-3.5" />
-                        </div>
-                        <span className="flex h-7 w-7 items-center justify-center rounded-xl bg-[var(--color-primary-soft)] text-sm shadow-2xs shrink-0 text-[var(--color-primary)]">
-                          <Receipt className="h-4 w-4" />
-                        </span>
-                        <div className="min-w-0 flex-1 flex items-center gap-1.5 flex-wrap">
-                          <span className="font-bold text-xs text-[var(--color-text-primary)] truncate group-hover:text-[var(--color-primary)] transition-colors">
+                    <div className="flex flex-row items-start gap-2.5 sm:gap-3 w-full">
+                      <div className="p-1 shrink-0 text-[var(--color-text-muted)] mt-0.5" title={t('plan.defaultLocked', 'Hạng mục mặc định')}>
+                        <Lock className="h-3.5 w-3.5" />
+                      </div>
+                      <span className="flex h-7 w-7 items-center justify-center rounded-xl bg-[var(--color-primary-soft)] text-sm shadow-2xs shrink-0 text-[var(--color-primary)]">
+                        <Receipt className="h-4 w-4" />
+                      </span>
+                      <div className="flex-1 min-w-0 flex flex-col items-start gap-2">
+                        <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+                          <span className="font-bold text-xs text-[var(--color-text-primary)] whitespace-normal break-words group-hover:text-[var(--color-primary)] transition-colors">
                             {t('plan.cat_fixed', 'Hóa Đơn Cố Định (Fixed Bills)')}
                           </span>
                           <span className="text-[10px] font-bold text-[var(--color-primary)] bg-[var(--color-primary-soft)] px-1.5 py-0.5 rounded-md shrink-0 border border-[var(--color-primary)]/20">
                             {t('plan.defaultCategory', 'Mặc định')}
                           </span>
-                          <span className="text-[10px] font-semibold text-[var(--color-primary)] bg-[var(--color-primary-soft)] px-1.5 py-0.5 rounded-md shrink-0 border border-[var(--color-primary)]/20 inline-flex items-center gap-0.5">
+                          <span className="text-[10px] font-semibold text-[var(--color-primary)] bg-[var(--color-primary-soft)] px-1.5 py-0.5 rounded-md shrink-0 border border-[var(--color-primary)]/20 inline-flex items-center gap-0.5 shrink-0">
                             <Settings2 className="h-3 w-3" />
                             <span>{fixedBills.length} {t('settings.billsCountUnit', 'khoản')}</span>
                           </span>
                         </div>
-                      </div>
 
-                      {/* Read-only percentage badge */}
-                      <PercentageInput
-                        value={fixedBillsPercent}
-                        readOnly={true}
-                        ariaLabel="Fixed Bills Percent"
-                      />
+                        {/* Read-only percentage badge aligned left with text */}
+                        <PercentageInput
+                          value={fixedBillsPercent}
+                          readOnly={true}
+                          ariaLabel="Fixed Bills Percent"
+                        />
+                      </div>
                     </div>
 
-                    <div className="flex items-center justify-between pt-1 border-t border-[var(--color-border)]/60 text-xs">
+                    <div className="flex items-center justify-between pt-2 border-t border-[var(--color-border)]/60 text-xs">
                       <span className="text-[11px] text-[var(--color-primary)] group-hover:underline flex items-center gap-1">
                         <span>{t('plan.clickToManageBills', 'Chạm để sửa chi tiết các khoản')}</span>
                         <span>→</span>
@@ -497,33 +572,33 @@ export function SettingsPage() {
                       CATEGORY 3: Savings (Mandatory Default)
                       =================================================== */}
                   <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg-subtle)] p-3.5 space-y-2.5 box-border">
-                    <div className="flex items-center justify-between gap-2">
-                      <div className="flex items-center gap-2 min-w-0 flex-1">
-                        <div className="p-1 shrink-0 text-[var(--color-text-muted)]" title={t('plan.defaultLocked', 'Hạng mục mặc định')}>
-                          <Lock className="h-3.5 w-3.5" />
-                        </div>
-                        <span className="flex h-7 w-7 items-center justify-center rounded-xl bg-[var(--color-bg-surface)] text-sm shadow-2xs shrink-0 text-[var(--color-primary)]">
-                          <CategoryIconRenderer icon="🏦" size={16} />
-                        </span>
-                        <div className="min-w-0 flex-1 flex items-center gap-1.5 flex-wrap">
-                          <span className="font-bold text-xs text-[var(--color-text-primary)] truncate">
+                    <div className="flex flex-row items-start gap-2.5 sm:gap-3 w-full">
+                      <div className="p-1 shrink-0 text-[var(--color-text-muted)] mt-0.5" title={t('plan.defaultLocked', 'Hạng mục mặc định')}>
+                        <Lock className="h-3.5 w-3.5" />
+                      </div>
+                      <span className="flex h-7 w-7 items-center justify-center rounded-xl bg-[var(--color-bg-surface)] text-sm shadow-2xs shrink-0 text-[var(--color-primary)]">
+                        <CategoryIconRenderer icon="🏦" size={16} />
+                      </span>
+                      <div className="flex-1 min-w-0 flex flex-col items-start gap-2">
+                        <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+                          <span className="font-bold text-xs text-[var(--color-text-primary)] whitespace-normal break-words">
                             {t('plan.cat_savings', 'Tiết Kiệm (Savings)')}
                           </span>
                           <span className="text-[10px] font-bold text-[var(--color-primary)] bg-[var(--color-primary-soft)] px-1.5 py-0.5 rounded-md shrink-0 border border-[var(--color-primary)]/20">
                             {t('plan.defaultCategory', 'Mặc định')}
                           </span>
                         </div>
-                      </div>
 
-                      {/* Percentage Input with Up/Down buttons */}
-                      <PercentageInput
-                        value={savingsPercent}
-                        onChange={setSavingsPercent}
-                        ariaLabel="Savings Percent"
-                      />
+                        {/* Percentage Controls aligned left with text */}
+                        <PercentageInput
+                          value={savingsPercent}
+                          onChange={setSavingsPercent}
+                          ariaLabel="Savings Percent"
+                        />
+                      </div>
                     </div>
 
-                    <div className="flex items-center justify-between pt-1 border-t border-[var(--color-border)]/60 text-xs">
+                    <div className="flex items-center justify-between pt-2 border-t border-[var(--color-border)]/60 text-xs">
                       <span className="text-[11px] text-[var(--color-text-muted)]">
                         {t('plan.allocatedAmount', 'Số tiền phân bổ')}:
                       </span>
@@ -543,37 +618,39 @@ export function SettingsPage() {
                         key={item.id}
                         className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg-subtle)] p-3.5 space-y-2.5 box-border transition-colors hover:border-[var(--color-border-focused)]/50"
                       >
-                        <div className="flex items-center justify-between gap-2">
-                          <div className="flex items-center gap-2 min-w-0 flex-1">
-                            <span className="flex h-7 w-7 items-center justify-center rounded-xl bg-[var(--color-bg-surface)] text-sm shadow-2xs shrink-0 text-[var(--color-primary)]">
-                              <CategoryIconRenderer icon={item.icon} size={16} />
-                            </span>
-                            <input
-                              type="text"
-                              value={item.name}
-                              onChange={(e) => updateCustomItemName(item.id, e.target.value)}
-                              className="font-bold text-xs text-[var(--color-text-primary)] bg-transparent border-b border-transparent focus:border-[var(--color-border-focused)] focus:outline-none min-w-0 flex-1 truncate"
-                              placeholder={t('plan.categoryNamePlaceholder', 'Tên danh mục')}
-                            />
-                            <button
-                              type="button"
-                              onClick={() => removeCustomItem(item.id)}
-                              className="p-1 text-[var(--color-text-muted)] hover:text-[var(--color-expense)] cursor-pointer rounded-lg hover:bg-[var(--color-expense-soft)] transition-colors shrink-0"
-                              title={t('plan.deleteCategory', 'Xóa danh mục')}
-                            >
-                              <Trash2 className="h-3.5 w-3.5" />
-                            </button>
-                          </div>
+                        <div className="flex flex-row items-start gap-2.5 sm:gap-3 w-full">
+                          <span className="flex h-7 w-7 items-center justify-center rounded-xl bg-[var(--color-bg-surface)] text-sm shadow-2xs shrink-0 text-[var(--color-primary)] mt-0.5">
+                            <CategoryIconRenderer icon={item.icon} size={16} />
+                          </span>
+                          <div className="flex-1 min-w-0 flex flex-col items-start gap-2">
+                            <div className="flex items-center gap-2 w-full">
+                              <input
+                                type="text"
+                                value={item.name}
+                                onChange={(e) => updateCustomItemName(item.id, e.target.value)}
+                                className="font-bold text-xs text-[var(--color-text-primary)] bg-transparent border-b border-transparent focus:border-[var(--color-border-focused)] focus:outline-none min-w-0 flex-1 truncate"
+                                placeholder={t('plan.categoryNamePlaceholder', 'Tên danh mục')}
+                              />
+                              <button
+                                type="button"
+                                onClick={() => removeCustomItem(item.id)}
+                                className="p-1 text-[var(--color-text-muted)] hover:text-[var(--color-expense)] cursor-pointer rounded-lg hover:bg-[var(--color-expense-soft)] transition-colors shrink-0"
+                                title={t('plan.deleteCategory', 'Xóa danh mục')}
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </button>
+                            </div>
 
-                          {/* Percentage Input with Up/Down buttons */}
-                          <PercentageInput
-                            value={item.percent}
-                            onChange={(val) => setCustomItemPercent(item.id, val)}
-                            ariaLabel={`${item.name} percent`}
-                          />
+                            {/* Percentage Controls aligned left with text */}
+                            <PercentageInput
+                              value={item.percent}
+                              onChange={(val) => setCustomItemPercent(item.id, val)}
+                              ariaLabel={`${item.name} percent`}
+                            />
+                          </div>
                         </div>
 
-                        <div className="flex items-center justify-between pt-1 border-t border-[var(--color-border)]/60 text-xs">
+                        <div className="flex items-center justify-between pt-2 border-t border-[var(--color-border)]/60 text-xs">
                           <span className="text-[11px] text-[var(--color-text-muted)]">
                             {t('plan.allocatedAmount', 'Số tiền phân bổ')}:
                           </span>
@@ -612,8 +689,12 @@ export function SettingsPage() {
                 {/* Save Budget Button (Independent Form Action) */}
                 <button
                   type="submit"
-                  disabled={savingBudget || !isAllocationValid}
-                  className="w-full rounded-2xl bg-[var(--color-primary)] px-5 py-3.5 text-center text-sm font-bold text-white shadow-md hover:bg-[var(--color-primary-hover)] active:scale-[0.99] disabled:bg-[var(--color-bg-subtle)] disabled:text-[var(--color-text-muted)] disabled:cursor-not-allowed cursor-pointer transition-all flex items-center justify-center gap-2 box-border"
+                  disabled={!hasChanges || savingBudget || !isAllocationValid}
+                  className={`w-full rounded-2xl px-5 py-3.5 text-center text-sm font-bold transition-all flex items-center justify-center gap-2 box-border ${
+                    !hasChanges || savingBudget || !isAllocationValid
+                      ? 'bg-gray-200 text-gray-400 dark:bg-gray-800 dark:text-gray-500 cursor-not-allowed opacity-60 shadow-none border border-[var(--color-border)]'
+                      : 'bg-[var(--color-primary)] text-white shadow-md hover:bg-[var(--color-primary-hover)] active:scale-[0.99] cursor-pointer'
+                  }`}
                 >
                   <Save className="h-4 w-4" />
                   <span>

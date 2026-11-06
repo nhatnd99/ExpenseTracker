@@ -9,6 +9,32 @@ export interface UseBudgetCalculatorOptions {
   initialCustomItems?: BudgetItemState[]
 }
 
+/**
+ * Calculates new budget allocation percentages when Fixed Bills amount/percent changes.
+ *
+ * Algorithm requirements:
+ * 1. Recalculate Fixed Bills % = (fixedBillsTotalVnd / income) * 100 (rounded to integer).
+ * 2. Keep current Savings % unchanged.
+ * 3. Recalculate Daily Expenses % = 100% - new Fixed Bills % - current Savings % (- customsSum).
+ * 4. Edge Case: If calculated Daily Expenses % < 0, clamp to 0 with Math.max(0, calculatedDailyPercent),
+ *    and deduct the remaining negative portion from Savings %.
+ */
+export function calculateRebalanceOnFixedBillsChange(
+  newFixedBillsPercent: number,
+  currentSavingsPercent: number,
+  customsSum: number = 0,
+): { dailyPercent: number; savingsPercent: number } {
+  const available = Math.max(0, 100 - newFixedBillsPercent - customsSum)
+  const calculatedDailyPercent = available - currentSavingsPercent
+  const dailyPercent = Math.max(0, calculatedDailyPercent)
+  const savingsPercent =
+    calculatedDailyPercent < 0
+      ? Math.max(0, currentSavingsPercent + calculatedDailyPercent)
+      : Math.min(available, currentSavingsPercent)
+
+  return { dailyPercent, savingsPercent }
+}
+
 export function useBudgetCalculator({
   income,
   fixedBillsTotalVnd,
@@ -86,12 +112,14 @@ export function useBudgetCalculator({
     [],
   )
 
-  // Auto re-balance whenever fixedBillsPercent changes
+  // Auto re-balance whenever fixedBillsPercent changes:
+  // All changes in Fixed Bills % are absorbed by Daily Expenses; Savings % is preserved.
+  // If Daily Expenses % drops below 0 (edge case), it is clamped to 0 and remainder is deducted from Savings.
   const prevFixedPctRef = useRef(fixedBillsPercent)
   useEffect(() => {
     if (prevFixedPctRef.current !== fixedBillsPercent) {
       prevFixedPctRef.current = fixedBillsPercent
-      const result = balanceCategories(dailyPercent, savingsPercent, customItems, fixedBillsPercent, 'savings')
+      const result = balanceCategories(dailyPercent, savingsPercent, customItems, fixedBillsPercent, 'daily')
       setDailyPercentState(result.daily)
       setSavingsPercentState(result.savings)
       setCustomItems(result.customs)
@@ -174,7 +202,7 @@ export function useBudgetCalculator({
   // Initialize/Set entire state from loaded plan
   const initializeFromPlan = useCallback(
     (daily: number, savings: number, customs: BudgetItemState[], fixedPct: number) => {
-      const result = balanceCategories(daily, savings, customs, fixedPct, 'savings')
+      const result = balanceCategories(daily, savings, customs, fixedPct, 'daily')
       setDailyPercentState(result.daily)
       setSavingsPercentState(result.savings)
       setCustomItems(result.customs)

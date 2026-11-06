@@ -55,7 +55,7 @@ export const PercentageInput: React.FC<PercentageInputProps> = ({
 
   if (readOnly) {
     return (
-      <div className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-xl bg-[var(--color-primary-soft)] border border-[var(--color-primary)]/20 ${className}`}>
+      <div className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-xl bg-[var(--color-primary-soft)] border border-[var(--color-primary)]/20 shrink-0 ${className}`}>
         <span className="text-xs font-extrabold text-[var(--color-primary)] amount-display">
           {value}%
         </span>
@@ -65,7 +65,7 @@ export const PercentageInput: React.FC<PercentageInputProps> = ({
 
   return (
     <div
-      className={`inline-flex items-center rounded-xl border border-[var(--color-border)] bg-[var(--color-bg-surface)] p-0.5 shadow-2xs transition-all focus-within:border-[var(--color-border-focused)] focus-within:ring-1 focus-within:ring-[var(--color-border-focused)] ${
+      className={`inline-flex items-center rounded-xl border border-[var(--color-border)] bg-[var(--color-bg-surface)] p-0.5 shadow-2xs transition-all shrink-0 focus-within:border-[var(--color-border-focused)] focus-within:ring-1 focus-within:ring-[var(--color-border-focused)] ${
         disabled ? 'opacity-40 cursor-not-allowed' : ''
       } ${className}`}
     >
