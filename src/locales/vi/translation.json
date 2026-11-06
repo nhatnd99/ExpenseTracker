@@ -240,7 +240,6 @@
     "currentCycle": "Chu kỳ hiện tại",
     "dayDetailsTitle": "Chi Tiêu Ngày",
     "dayTotalSpent": "Tổng chi trong ngày",
-    "tapDayToView": "Chạm vào ô ngày để xem & sửa chi tiêu",
     "weekdays": {
       "mon": "T2",
       "tue": "T3",
@@ -272,7 +271,6 @@
     "savePaydayBtn": "Lưu Ngày Bắt Đầu",
     "savePaydaySuccess": "Đã lưu ngày bắt đầu chu kỳ thành công!",
     "manageTemplatesTitle": "Quản lý biểu mẫu nhanh",
-    "manageTemplatesDesc": "Cấu hình sẵn các biểu mẫu giao dịch hay dùng để tự động điền khi ghi chép",
     "addTemplateBtn": "Thêm biểu mẫu",
     "templatesListLabel": "Danh sách biểu mẫu",
     "noTemplates": "Chưa có biểu mẫu nào. Hãy bấm \"Thêm biểu mẫu\" để tạo mới.",
@@ -301,7 +299,6 @@
     "quickAmountInvalid": "Vui lòng nhập số tiền hợp lệ lớn hơn 0.",
     "deleteQuickAmountAria": "Xóa phím tắt {{amount}}",
     "dangerZoneTitle": "Khu Vực Nguy Hiểm",
-    "dangerZoneDesc": "Xóa vĩnh viễn toàn bộ dữ liệu bao gồm các khoản chi tiêu, thu nhập, danh mục tùy chỉnh và kế hoạch ngân sách.",
     "resetAppDataBtn": "Xóa toàn bộ dữ liệu",
     "resetModalTitle": "Xác Nhận Xóa Toàn Bộ Dữ Liệu?",
     "resetModalWarning": "Hành động này sẽ xóa toàn bộ giao dịch, cài đặt ngân sách và không thể khôi phục. Bạn có chắc chắn muốn tiếp tục?",

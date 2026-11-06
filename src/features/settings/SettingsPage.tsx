@@ -69,7 +69,7 @@ export function SettingsPage() {
     let active = true
     categoryRepository.findAll().then((cats) => {
       if (active) setAllCategories(cats)
-    }).catch(() => {})
+    }).catch(() => { })
     return () => {
       active = false
     }
@@ -260,9 +260,9 @@ export function SettingsPage() {
       }
 
       // 2. Ensure categories exist
-      await categoryRepository.update('cat-expenses', { name: 'Daily Expenses', sortOrder: 1 }).catch(() => {})
-      await categoryRepository.update('cat-fixed', { name: 'Fixed Bills', sortOrder: 2 }).catch(() => {})
-      await categoryRepository.update('cat-savings', { name: 'Savings', sortOrder: 3 }).catch(() => {})
+      await categoryRepository.update('cat-expenses', { name: 'Daily Expenses', sortOrder: 1 }).catch(() => { })
+      await categoryRepository.update('cat-fixed', { name: 'Fixed Bills', sortOrder: 2 }).catch(() => { })
+      await categoryRepository.update('cat-savings', { name: 'Savings', sortOrder: 3 }).catch(() => { })
 
       for (let i = 0; i < customItems.length; i++) {
         const item = customItems[i]
@@ -349,9 +349,6 @@ export function SettingsPage() {
                 <h2 className="text-base font-bold text-[var(--color-text-primary)] leading-tight">
                   {t('plan.title', 'Kế Hoạch Ngân Sách')}
                 </h2>
-                <p className="text-xs text-[var(--color-text-muted)] truncate">
-                  {t('plan.subtitle', 'Tự động cân bằng 100% ngân sách và tính toán hạn mức ngày')}
-                </p>
               </div>
             </div>
 
@@ -393,15 +390,7 @@ export function SettingsPage() {
                       <span>{t('plan.calculatedDaily', 'Hạn Mức Chi Tiêu Mỗi Ngày')}:</span>
                     </span>
                     <span className="text-xl font-extrabold amount-display text-[var(--color-income)]">
-                      {formatVnd(calculatedDailyLimit)}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between text-[11px] text-[var(--color-text-secondary)]">
-                    <span className="font-mono">
-                      {dailyPercent}% {t('settings.catDailyExpenses', 'Chi tiêu')} ({formatVnd(dailyExpensesAmount)}) ÷ {activeCycle.totalDays} {t('common.days', 'ngày')}
-                    </span>
-                    <span className="font-bold text-[var(--color-income)]">
-                      {activeCycle.totalDays} {t('common.days', 'ngày')}
+                      {formatVnd(calculatedDailyLimit)} 
                     </span>
                   </div>
                 </div>
@@ -672,9 +661,8 @@ export function SettingsPage() {
                 {t('settings.dayOption', { day: selectedPayDay })}
               </span>
               <ChevronDown
-                className={`h-4 w-4 text-[var(--color-text-muted)] transition-transform duration-200 ${
-                  isPaydayOpen ? 'rotate-180' : ''
-                }`}
+                className={`h-4 w-4 text-[var(--color-text-muted)] transition-transform duration-200 ${isPaydayOpen ? 'rotate-180' : ''
+                  }`}
               />
             </div>
           </button>
@@ -692,11 +680,10 @@ export function SettingsPage() {
                     key={d}
                     type="button"
                     onClick={() => setSelectedPayDay(d)}
-                    className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all active:scale-95 shrink-0 cursor-pointer ${
-                      selectedPayDay === d
+                    className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all active:scale-95 shrink-0 cursor-pointer ${selectedPayDay === d
                         ? 'bg-[var(--color-primary)] text-white shadow-2xs'
                         : 'bg-[var(--color-bg-subtle)] text-[var(--color-text-secondary)] border border-[var(--color-border)] hover:bg-[var(--color-border)]'
-                    }`}
+                      }`}
                   >
                     {d === 1 ? '1' : `${d}`}
                   </button>
@@ -719,11 +706,10 @@ export function SettingsPage() {
                       key={d}
                       type="button"
                       onClick={() => setSelectedPayDay(d)}
-                      className={`h-8 rounded-xl text-xs font-bold transition-all active:scale-95 cursor-pointer flex items-center justify-center ${
-                        selectedPayDay === d
+                      className={`h-8 rounded-xl text-xs font-bold transition-all active:scale-95 cursor-pointer flex items-center justify-center ${selectedPayDay === d
                           ? 'bg-[var(--color-primary)] text-white shadow-2xs font-extrabold'
                           : 'border border-[var(--color-border)] bg-[var(--color-bg-surface)] text-[var(--color-text-primary)] hover:bg-[var(--color-border)]'
-                      }`}
+                        }`}
                     >
                       {d}
                     </button>
@@ -780,9 +766,6 @@ export function SettingsPage() {
                     {quickTemplates.length}
                   </span>
                 </div>
-                <p className="text-xs text-[var(--color-text-muted)] truncate mt-0.5">
-                  {t('settings.manageTemplatesDesc', 'Cấu hình sẵn các biểu mẫu giao dịch hay dùng để tự động điền khi ghi chép')}
-                </p>
               </div>
             </div>
 
@@ -801,9 +784,8 @@ export function SettingsPage() {
                   className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-[var(--color-bg-subtle)] border border-[var(--color-border)] text-[11px] font-semibold text-[var(--color-text-secondary)] shrink-0"
                 >
                   <span
-                    className={`w-1.5 h-1.5 rounded-full ${
-                      tpl.type === 'income' ? 'bg-emerald-500' : 'bg-rose-500'
-                    }`}
+                    className={`w-1.5 h-1.5 rounded-full ${tpl.type === 'income' ? 'bg-emerald-500' : 'bg-rose-500'
+                      }`}
                   />
                   <span className="truncate max-w-[120px]">{tpl.name}</span>
                 </span>
@@ -827,12 +809,6 @@ export function SettingsPage() {
               {t('settings.dangerZoneTitle', 'Khu Vực Nguy Hiểm')}
             </h3>
           </div>
-          <p className="text-xs text-[var(--color-text-muted)] leading-relaxed">
-            {t(
-              'settings.dangerZoneDesc',
-              'Xóa vĩnh viễn toàn bộ dữ liệu bao gồm các khoản chi tiêu, thu nhập, danh mục tùy chỉnh và kế hoạch ngân sách.',
-            )}
-          </p>
           <button
             type="button"
             onClick={() => setIsResetModalOpen(true)}

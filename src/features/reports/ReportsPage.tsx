@@ -448,9 +448,6 @@ export function ReportsPage() {
                     <Calendar className="h-3.5 w-3.5 text-[var(--color-primary)] shrink-0" />
                     <span>{t('reports.calendarTitle', 'Lịch Chi Tiêu Chu Kỳ')}</span>
                   </h3>
-                  <p className="text-[10px] text-[var(--color-text-muted)] mt-0.5">
-                    {t('reports.tapDayToView', 'Chạm vào ô ngày để xem & sửa chi tiêu')}
-                  </p>
                 </div>
                 <span className="text-[10px] text-[var(--color-text-muted)] font-medium">
                   {weekdayNames[0]} – {weekdayNames[6]}

@@ -239,7 +239,6 @@
     "currentCycle": "Current Cycle",
     "dayDetailsTitle": "Expenses on",
     "dayTotalSpent": "Total spent on this day",
-    "tapDayToView": "Tap any day to view & edit expenses",
     "weekdays": {
       "mon": "Mon",
       "tue": "Tue",
@@ -271,7 +270,6 @@
     "savePaydayBtn": "Save Cycle Start Day",
     "savePaydaySuccess": "Cycle start day saved successfully!",
     "manageTemplatesTitle": "Manage Quick Templates",
-    "manageTemplatesDesc": "Pre-configure frequent transaction templates to auto-fill the record form",
     "addTemplateBtn": "Add Template",
     "templatesListLabel": "Templates List",
     "noTemplates": "No templates yet. Tap \"Add Template\" to create one.",
@@ -300,7 +298,6 @@
     "quickAmountInvalid": "Please enter a valid amount greater than 0.",
     "deleteQuickAmountAria": "Delete quick amount {{amount}}",
     "dangerZoneTitle": "Danger Zone",
-    "dangerZoneDesc": "Permanently delete all data including transactions, income, custom categories, and budget plans.",
     "resetAppDataBtn": "Reset All Data",
     "resetModalTitle": "Confirm Reset All Data?",
     "resetModalWarning": "This action will delete all transactions, budget settings, and cannot be undone. Are you sure you want to continue?",

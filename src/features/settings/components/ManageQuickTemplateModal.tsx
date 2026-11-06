@@ -431,9 +431,6 @@ export const ManageQuickTemplateModal: React.FC<ManageQuickTemplateModalProps> =
                   {quickTemplates.length}
                 </span>
               </div>
-              <p className="text-xs text-[var(--color-text-muted)] truncate">
-                {t('settings.manageTemplatesDesc', 'Cấu hình sẵn các biểu mẫu giao dịch hay dùng để tự động điền khi ghi chép')}
-              </p>
             </div>
           </div>
           <button
