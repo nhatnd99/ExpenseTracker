@@ -55,7 +55,7 @@ export const PercentageInput: React.FC<PercentageInputProps> = ({
 
   if (readOnly) {
     return (
-      <div className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-[var(--color-primary-soft)] border border-[var(--color-primary)]/20 shrink-0 ${className}`}>
+      <div className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-xl bg-[var(--color-primary-soft)] border border-[var(--color-primary)]/20 shrink-0 ${className}`}>
         <span className="text-xs font-extrabold text-[var(--color-primary)] amount-display">
           {value}%
         </span>
@@ -65,7 +65,7 @@ export const PercentageInput: React.FC<PercentageInputProps> = ({
 
   return (
     <div
-      className={`inline-flex items-center rounded-lg border border-[var(--color-border)] bg-[var(--color-bg-surface)] p-0.5 shadow-2xs transition-all shrink-0 focus-within:border-[var(--color-border-focused)] focus-within:ring-1 focus-within:ring-[var(--color-border-focused)] ${
+      className={`inline-flex items-center rounded-xl border border-[var(--color-border)] bg-[var(--color-bg-surface)] p-0.5 shadow-2xs transition-all shrink-0 focus-within:border-[var(--color-border-focused)] focus-within:ring-1 focus-within:ring-[var(--color-border-focused)] ${
         disabled ? 'opacity-40 cursor-not-allowed' : ''
       } ${className}`}
     >
@@ -75,13 +75,13 @@ export const PercentageInput: React.FC<PercentageInputProps> = ({
         disabled={disabled || value <= min}
         onClick={handleDecrement}
         aria-label={t('settings.decreasePercent', 'Giảm 1%')}
-        className="flex h-6 w-6 items-center justify-center rounded-md text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-subtle)] hover:text-[var(--color-text-primary)] active:scale-95 disabled:opacity-20 disabled:cursor-not-allowed cursor-pointer transition-all shrink-0"
+        className="flex h-7 w-7 items-center justify-center rounded-lg text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-subtle)] hover:text-[var(--color-text-primary)] active:scale-95 disabled:opacity-20 disabled:cursor-not-allowed cursor-pointer transition-all shrink-0"
       >
-        <Minus className="h-3 w-3" />
+        <Minus className="h-3.5 w-3.5" />
       </button>
 
       {/* Numeric Input without native spinners */}
-      <div className="relative flex items-center justify-center px-0.5">
+      <div className="relative flex items-center justify-center px-1">
         <input
           type="number"
           min={min}
@@ -91,9 +91,9 @@ export const PercentageInput: React.FC<PercentageInputProps> = ({
           placeholder="0"
           disabled={disabled}
           aria-label={effectiveAriaLabel}
-          className="w-6 text-center text-xs font-bold text-[var(--color-text-primary)] bg-transparent border-none p-0 focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+          className="w-8 text-center text-xs font-bold text-[var(--color-text-primary)] bg-transparent border-none p-0 focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
         />
-        <span className="text-[10px] font-bold text-[var(--color-text-muted)] select-none ml-0.5">
+        <span className="text-xs font-bold text-[var(--color-text-muted)] select-none ml-0.5">
           %
         </span>
       </div>
@@ -104,9 +104,9 @@ export const PercentageInput: React.FC<PercentageInputProps> = ({
         disabled={disabled || value >= max}
         onClick={handleIncrement}
         aria-label={t('settings.increasePercent', 'Tăng 1%')}
-        className="flex h-6 w-6 items-center justify-center rounded-md text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-subtle)] hover:text-[var(--color-text-primary)] active:scale-95 disabled:opacity-20 disabled:cursor-not-allowed cursor-pointer transition-all shrink-0"
+        className="flex h-7 w-7 items-center justify-center rounded-lg text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-subtle)] hover:text-[var(--color-text-primary)] active:scale-95 disabled:opacity-20 disabled:cursor-not-allowed cursor-pointer transition-all shrink-0"
       >
-        <Plus className="h-3 w-3" />
+        <Plus className="h-3.5 w-3.5" />
       </button>
     </div>
   )

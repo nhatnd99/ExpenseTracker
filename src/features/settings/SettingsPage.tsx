@@ -476,15 +476,15 @@ export function SettingsPage() {
                       CATEGORY 1: Daily Expenses (Mandatory Default)
                       =================================================== */}
                   <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg-subtle)] p-3.5 space-y-2.5 box-border">
-                    <div className="flex flex-col min-[420px]:flex-row min-[420px]:items-center justify-between gap-2.5 sm:gap-3 w-full">
-                      <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 flex-1">
-                        <div className="p-1 shrink-0 text-[var(--color-text-muted)]" title={t('plan.defaultLocked', 'Hạng mục mặc định')}>
-                          <Lock className="h-3.5 w-3.5" />
-                        </div>
-                        <span className="flex h-7 w-7 items-center justify-center rounded-xl bg-[var(--color-bg-surface)] text-sm shadow-2xs shrink-0 text-[var(--color-primary)]">
-                          <CategoryIconRenderer icon="🛒" size={16} />
-                        </span>
-                        <div className="flex-1 min-w-0 flex flex-wrap items-center gap-1.5 sm:gap-2">
+                    <div className="flex flex-row items-start gap-2.5 sm:gap-3 w-full">
+                      <div className="p-1 shrink-0 text-[var(--color-text-muted)] mt-0.5" title={t('plan.defaultLocked', 'Hạng mục mặc định')}>
+                        <Lock className="h-3.5 w-3.5" />
+                      </div>
+                      <span className="flex h-7 w-7 items-center justify-center rounded-xl bg-[var(--color-bg-surface)] text-sm shadow-2xs shrink-0 text-[var(--color-primary)]">
+                        <CategoryIconRenderer icon="🛒" size={16} />
+                      </span>
+                      <div className="flex-1 min-w-0 flex flex-col items-start gap-2">
+                        <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
                           <span className="font-bold text-xs text-[var(--color-text-primary)] whitespace-normal break-words">
                             {t('plan.cat_expenses', 'Chi Tiêu Hàng Ngày (Daily Expenses)')}
                           </span>
@@ -492,14 +492,14 @@ export function SettingsPage() {
                             {t('plan.defaultCategory', 'Mặc định')}
                           </span>
                         </div>
-                      </div>
 
-                      <PercentageInput
-                        value={dailyPercent}
-                        onChange={setDailyPercent}
-                        ariaLabel="Daily Expenses Percent"
-                        className="self-start min-[420px]:self-center"
-                      />
+                        {/* Percentage Controls aligned left with text */}
+                        <PercentageInput
+                          value={dailyPercent}
+                          onChange={setDailyPercent}
+                          ariaLabel="Daily Expenses Percent"
+                        />
+                      </div>
                     </div>
 
                     <div className="flex items-center justify-between pt-2 border-t border-[var(--color-border)]/60 text-xs">
@@ -527,15 +527,15 @@ export function SettingsPage() {
                     }}
                     className="rounded-2xl border-2 border-[var(--color-primary)]/30 bg-[var(--color-bg-surface)] p-3.5 space-y-2.5 box-border cursor-pointer hover:border-[var(--color-primary)] transition-all active:scale-[0.99] shadow-2xs group"
                   >
-                    <div className="flex flex-col min-[420px]:flex-row min-[420px]:items-center justify-between gap-2.5 sm:gap-3 w-full">
-                      <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 flex-1">
-                        <div className="p-1 shrink-0 text-[var(--color-text-muted)]" title={t('plan.defaultLocked', 'Hạng mục mặc định')}>
-                          <Lock className="h-3.5 w-3.5" />
-                        </div>
-                        <span className="flex h-7 w-7 items-center justify-center rounded-xl bg-[var(--color-primary-soft)] text-sm shadow-2xs shrink-0 text-[var(--color-primary)]">
-                          <Receipt className="h-4 w-4" />
-                        </span>
-                        <div className="flex-1 min-w-0 flex flex-wrap items-center gap-1.5 sm:gap-2">
+                    <div className="flex flex-row items-start gap-2.5 sm:gap-3 w-full">
+                      <div className="p-1 shrink-0 text-[var(--color-text-muted)] mt-0.5" title={t('plan.defaultLocked', 'Hạng mục mặc định')}>
+                        <Lock className="h-3.5 w-3.5" />
+                      </div>
+                      <span className="flex h-7 w-7 items-center justify-center rounded-xl bg-[var(--color-primary-soft)] text-sm shadow-2xs shrink-0 text-[var(--color-primary)]">
+                        <Receipt className="h-4 w-4" />
+                      </span>
+                      <div className="flex-1 min-w-0 flex flex-col items-start gap-2">
+                        <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
                           <span className="font-bold text-xs text-[var(--color-text-primary)] whitespace-normal break-words group-hover:text-[var(--color-primary)] transition-colors">
                             {t('plan.cat_fixed', 'Hóa Đơn Cố Định (Fixed Bills)')}
                           </span>
@@ -547,14 +547,14 @@ export function SettingsPage() {
                             <span>{fixedBills.length} {t('settings.billsCountUnit', 'khoản')}</span>
                           </span>
                         </div>
-                      </div>
 
-                      <PercentageInput
-                        value={fixedBillsPercent}
-                        readOnly={true}
-                        ariaLabel="Fixed Bills Percent"
-                        className="self-start min-[420px]:self-center"
-                      />
+                        {/* Read-only percentage badge aligned left with text */}
+                        <PercentageInput
+                          value={fixedBillsPercent}
+                          readOnly={true}
+                          ariaLabel="Fixed Bills Percent"
+                        />
+                      </div>
                     </div>
 
                     <div className="flex items-center justify-between pt-2 border-t border-[var(--color-border)]/60 text-xs">
@@ -572,15 +572,15 @@ export function SettingsPage() {
                       CATEGORY 3: Savings (Mandatory Default)
                       =================================================== */}
                   <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg-subtle)] p-3.5 space-y-2.5 box-border">
-                    <div className="flex flex-col min-[420px]:flex-row min-[420px]:items-center justify-between gap-2.5 sm:gap-3 w-full">
-                      <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 flex-1">
-                        <div className="p-1 shrink-0 text-[var(--color-text-muted)]" title={t('plan.defaultLocked', 'Hạng mục mặc định')}>
-                          <Lock className="h-3.5 w-3.5" />
-                        </div>
-                        <span className="flex h-7 w-7 items-center justify-center rounded-xl bg-[var(--color-bg-surface)] text-sm shadow-2xs shrink-0 text-[var(--color-primary)]">
-                          <CategoryIconRenderer icon="🏦" size={16} />
-                        </span>
-                        <div className="flex-1 min-w-0 flex flex-wrap items-center gap-1.5 sm:gap-2">
+                    <div className="flex flex-row items-start gap-2.5 sm:gap-3 w-full">
+                      <div className="p-1 shrink-0 text-[var(--color-text-muted)] mt-0.5" title={t('plan.defaultLocked', 'Hạng mục mặc định')}>
+                        <Lock className="h-3.5 w-3.5" />
+                      </div>
+                      <span className="flex h-7 w-7 items-center justify-center rounded-xl bg-[var(--color-bg-surface)] text-sm shadow-2xs shrink-0 text-[var(--color-primary)]">
+                        <CategoryIconRenderer icon="🏦" size={16} />
+                      </span>
+                      <div className="flex-1 min-w-0 flex flex-col items-start gap-2">
+                        <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
                           <span className="font-bold text-xs text-[var(--color-text-primary)] whitespace-normal break-words">
                             {t('plan.cat_savings', 'Tiết Kiệm (Savings)')}
                           </span>
@@ -588,14 +588,14 @@ export function SettingsPage() {
                             {t('plan.defaultCategory', 'Mặc định')}
                           </span>
                         </div>
-                      </div>
 
-                      <PercentageInput
-                        value={savingsPercent}
-                        onChange={setSavingsPercent}
-                        ariaLabel="Savings Percent"
-                        className="self-start min-[420px]:self-center"
-                      />
+                        {/* Percentage Controls aligned left with text */}
+                        <PercentageInput
+                          value={savingsPercent}
+                          onChange={setSavingsPercent}
+                          ariaLabel="Savings Percent"
+                        />
+                      </div>
                     </div>
 
                     <div className="flex items-center justify-between pt-2 border-t border-[var(--color-border)]/60 text-xs">
@@ -618,12 +618,12 @@ export function SettingsPage() {
                         key={item.id}
                         className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg-subtle)] p-3.5 space-y-2.5 box-border transition-colors hover:border-[var(--color-border-focused)]/50"
                       >
-                        <div className="flex flex-col min-[420px]:flex-row min-[420px]:items-center justify-between gap-2.5 sm:gap-3 w-full">
-                          <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 flex-1">
-                            <span className="flex h-7 w-7 items-center justify-center rounded-xl bg-[var(--color-bg-surface)] text-sm shadow-2xs shrink-0 text-[var(--color-primary)]">
-                              <CategoryIconRenderer icon={item.icon} size={16} />
-                            </span>
-                            <div className="flex items-center gap-2 min-w-0 flex-1">
+                        <div className="flex flex-row items-start gap-2.5 sm:gap-3 w-full">
+                          <span className="flex h-7 w-7 items-center justify-center rounded-xl bg-[var(--color-bg-surface)] text-sm shadow-2xs shrink-0 text-[var(--color-primary)] mt-0.5">
+                            <CategoryIconRenderer icon={item.icon} size={16} />
+                          </span>
+                          <div className="flex-1 min-w-0 flex flex-col items-start gap-2">
+                            <div className="flex items-center gap-2 w-full">
                               <input
                                 type="text"
                                 value={item.name}
@@ -640,14 +640,14 @@ export function SettingsPage() {
                                 <Trash2 className="h-3.5 w-3.5" />
                               </button>
                             </div>
-                          </div>
 
-                          <PercentageInput
-                            value={item.percent}
-                            onChange={(val) => setCustomItemPercent(item.id, val)}
-                            ariaLabel={`${item.name} percent`}
-                            className="self-start min-[420px]:self-center"
-                          />
+                            {/* Percentage Controls aligned left with text */}
+                            <PercentageInput
+                              value={item.percent}
+                              onChange={(val) => setCustomItemPercent(item.id, val)}
+                              ariaLabel={`${item.name} percent`}
+                            />
+                          </div>
                         </div>
 
                         <div className="flex items-center justify-between pt-2 border-t border-[var(--color-border)]/60 text-xs">
