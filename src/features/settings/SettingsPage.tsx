@@ -406,42 +406,6 @@ export function SettingsPage() {
                   </div>
                 </div>
 
-                {/* 3. Total Progress Bar (Auto-balanced to 100%) */}
-                <div className="space-y-2 pt-1">
-                  <div className="flex items-center justify-between text-xs">
-                    <div className="flex items-center gap-1.5">
-                      <span className="font-bold uppercase tracking-wider text-[var(--color-text-secondary)]">
-                        {t('plan.allocationTitle', 'Phân Bổ Ngân Sách')}
-                      </span>
-                      <span className="text-[10px] text-[var(--color-text-muted)]">
-                        ({3 + customItems.length} {t('plan.categories', 'danh mục')})
-                      </span>
-                    </div>
-
-                    <span className="font-bold amount-display text-[var(--color-income)]">
-                      {totalPercent}% / 100%
-                    </span>
-                  </div>
-
-                  <div className="h-2.5 w-full overflow-hidden rounded-full bg-[var(--color-bg-subtle)] border border-[var(--color-border)] p-0.5 box-border">
-                    <div
-                      className="h-full rounded-full bg-[var(--color-income)] transition-all duration-300"
-                      style={{ width: `${Math.min(100, totalPercent)}%` }}
-                    />
-                  </div>
-
-                  <div className="flex items-center justify-between text-[11px] font-semibold">
-                    <span className="text-[var(--color-income)] flex items-center gap-1">
-                      <CheckCircle2 className="h-3 w-3" />
-                      <span>{t('plan.allocated100', 'Tự động cân bằng 100%')}</span>
-                    </span>
-
-                    <span className="text-[10px] text-[var(--color-text-muted)]">
-                      {t('settings.catFixedBills', 'Hóa đơn cố định')}: {fixedBillsPercent}% ({t('settings.autoCalculatedBadge', 'tự tính')})
-                    </span>
-                  </div>
-                </div>
-
                 {/* 4. Budget Allocation Categories List */}
                 <div className="space-y-3 pt-1">
                   {/* ===================================================

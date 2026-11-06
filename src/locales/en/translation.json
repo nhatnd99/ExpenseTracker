@@ -74,7 +74,6 @@
   },
   "plan": {
     "title": "Monthly Budget Plan",
-    "subtitle": "Configure your monthly income and custom category allocation percentages.",
     "planningMonth": "Planning Month",
     "incomeLabel": "Monthly Income",
     "incomePlaceholder": "Enter income amount",
@@ -122,7 +121,6 @@
     "billsListTitle": "Detailed fixed bill items",
     "noBillsYet": "No fixed bills added yet. Enter name and amount above to add.",
     "manageFixedBillsTitle": "Manage Fixed Bills",
-    "manageFixedBillsDesc": "Add, edit, or remove detailed fixed bill expenses",
     "clickToManageBills": "Tap to manage bill items",
     "categories": "categories",
     "scopeTitle": "Budget Save Scope:",

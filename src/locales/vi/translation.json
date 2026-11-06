@@ -122,7 +122,6 @@
     "billsListTitle": "Chi tiết các khoản hóa đơn cố định",
     "noBillsYet": "Chưa có khoản hóa đơn nào. Nhập tên và số tiền phía trên để thêm.",
     "manageFixedBillsTitle": "Quản Lý Hóa Đơn Cố Định",
-    "manageFixedBillsDesc": "Thêm, sửa, xóa các khoản chi phí cố định chi tiết",
     "clickToManageBills": "Chạm để quản lý chi tiết hóa đơn",
     "categories": "danh mục",
     "scopeTitle": "Phạm vi lưu ngân sách:",

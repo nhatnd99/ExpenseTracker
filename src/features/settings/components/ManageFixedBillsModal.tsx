@@ -115,9 +115,6 @@ const ManageFixedBillsDialog: React.FC<ManageFixedBillsDialogProps> = ({
               <h2 className="text-sm font-bold text-[var(--color-text-primary)]">
                 {t('plan.manageFixedBillsTitle', 'Quản Lý Hóa Đơn Cố Định')}
               </h2>
-              <span className="text-[10px] text-[var(--color-text-muted)] font-medium">
-                {t('plan.manageFixedBillsDesc', 'Nhập số tiền tuyệt đối cho từng hóa đơn')}
-              </span>
             </div>
           </div>
           <button

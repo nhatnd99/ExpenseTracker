@@ -26,6 +26,7 @@ import {
 import { CreateExpenseModal } from '@/features/transactions/components/CreateExpenseModal'
 import type { BudgetCategory, DateString } from '@/types/models'
 import { getCycleReportData, type CycleReportData } from './reportService'
+import { getDailyLimitSnapshots } from './snapshotService'
 import {
   formatCompactVnd,
   getDayOfWeekOffset,
@@ -140,15 +141,19 @@ export function ReportsPage() {
   const safeToSpend = dynamicBudget.todayLimit
   const baseDailyLimit = data?.baseDailyLimit ?? (data?.cycle.totalDays ? Math.round(data.progress.budgetVnd / data.cycle.totalDays) : 0)
   const benchmarkLimit = data?.averageActiveLimit ?? baseDailyLimit
-  const isAverageSafe = Boolean(data && data.averageDailySpend <= benchmarkLimit)
+  // Average daily spend warning: safe if within benchmark or if no active spending days in past (Edge Case)
+  const isAverageSafe = Boolean(
+    data && (data.activeSpendingDays === 0 || data.averageDailySpend <= benchmarkLimit)
+  )
 
-  // 3-State Time Logic Calendar Grid:
-  // 1. Quá khứ: limit = baseDailyLimit (Hạn mức tĩnh gốc), Balance = limit - spentOnThisDay
-  // 2. Hôm nay: limit = safeToSpend (Hạn mức linh hoạt), Balance = limit - spentOnThisDay
-  // 3. Tương lai: limit = safeToSpend, Balance = limit (Projection)
+  // 3-State Time Logic Calendar Grid with Daily Limit Snapshots:
+  // - Bước 1: Kiểm tra xem ngày đó đã có Hạn mức Snapshot được lưu chưa.
+  // - Bước 2: Nếu ĐÃ CÓ snapshot, sử dụng giá trị snapshot đó làm Hạn mức (Limit) cho ngày đó.
+  // - Bước 3: Nếu CHƯA CÓ snapshot (ngày hôm nay chưa kết thúc, hoặc ngày tương lai), tính bằng Flex Budget (safeToSpend).
   const calendarDays: CalendarDayData[] = useMemo(() => {
     if (!data) return []
     const todayDateObj = parseDateString(todayStr)
+    const snapshots = data.dailyLimitSnapshots ?? getDailyLimitSnapshots()
 
     return data.cycle.days.map((date) => {
       const dayNumber = parseInt(date.slice(8), 10)
@@ -161,18 +166,20 @@ export function ReportsPage() {
       const isToday = isSameDay(cellDateObj, todayDateObj)
       const isFuture = isAfter(cellDateObj, todayDateObj)
 
+      // Bước 1: Kiểm tra xem ngày đó đã có Hạn mức Snapshot được lưu chưa
+      const snapshotLimit = snapshots[date]
+
       let limit: number
       let balance: number
 
-      if (isPast) {
-        limit = baseDailyLimit
-        balance = limit - spent
-      } else if (isToday) {
-        limit = safeToSpend
+      if (snapshotLimit !== undefined) {
+        // Bước 2: Nếu ĐÃ CÓ snapshot, sử dụng giá trị snapshot đó làm Hạn mức cho ngày đó
+        limit = snapshotLimit
         balance = limit - spent
       } else {
+        // Bước 3: Nếu CHƯA CÓ snapshot (ví dụ: ngày hôm nay chưa kết thúc, hoặc ngày tương lai), tính theo Flex Budget
         limit = safeToSpend
-        balance = limit
+        balance = isFuture ? limit : limit - spent
       }
 
       return {
@@ -186,7 +193,7 @@ export function ReportsPage() {
         isFuture,
       }
     })
-  }, [data, todayStr, baseDailyLimit, safeToSpend])
+  }, [data, todayStr, safeToSpend])
 
   // Single Source of Truth: derive selected day's calculated data directly from calendarDays
   const selectedDayData = useMemo(() => {

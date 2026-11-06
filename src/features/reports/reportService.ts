@@ -13,9 +13,10 @@ import {
   calculatePassedDays,
   calculateSpentToDate,
 } from '@/domain/dynamicBudgetCalculator'
-import { parseDateString } from '@/services/dateService'
+import { parseDateString, getTodayString } from '@/services/dateService'
 import { isBefore, isSameDay, isAfter } from 'date-fns'
 import { getPaydayCycle, computeCycleProgress, type PaydayCycle, type CycleBudgetProgress } from './paydayCycle'
+import { syncCycleSnapshots } from './snapshotService'
 import type { MonthId, DateString } from '@/types/models'
 import type { EnrichedTransaction } from '@/features/transactions/transactionService'
 
@@ -53,6 +54,7 @@ export interface CycleReportData {
   averageDailySpend: number
   activeSpendingDays: number
   averageActiveLimit: number
+  dailyLimitSnapshots: Record<DateString, number>
 }
 
 export async function getCycleReportData(
@@ -111,7 +113,7 @@ export async function getCycleReportData(
     }
   }
 
-  const nowStr = todayStr || new Date().toISOString().slice(0, 10)
+  const nowStr = todayStr || getTodayString()
   const todayDateObj = parseDateString(nowStr)
   const baseDailyLimit = cycle.totalDays > 0 ? Math.round(budgetVnd / cycle.totalDays) : 0
 
@@ -142,17 +144,33 @@ export async function getCycleReportData(
   })
   const safeToSpend = dynamicResult.todayLimit
 
-  // Calculate Average Daily Spend: only divide by days that ACTUALLY HAD spending transactions (Active Days)
-  // Step 1: Filter valid daily expenses up to current date (type !== 'income' and !isExcludedFromDaily)
-  const effectiveEndDate = nowStr > cycle.endDate ? cycle.endDate : nowStr
+  // Calculate Average Daily Spend: strictly from start of cycle up to yesterday (excluding today and future)
+  // Step 1: Filter past daily expenses (transactionDate < today, type !== 'income', and !isExcludedFromDaily)
+  // Normalize today: reset hours, minutes, seconds, milliseconds to 00:00:00 for strict time comparison
+  const normalizedToday = parseDateString(nowStr)
+  normalizedToday.setHours(0, 0, 0, 0)
+
   const validDailyExpenses = transactions.filter((tx) => {
     const isExpense = tx.type !== 'income'
     const isNotFixedBill = !tx.isExcludedFromDaily
-    const inRange = tx.date >= cycle.startDate && tx.date <= effectiveEndDate
-    return isExpense && isNotFixedBill && inRange
+
+    // Normalize transaction date: prefer transactionDate ISO string, fallback to tx.date
+    let txDate: Date
+    if (tx.transactionDate) {
+      const parsed = new Date(tx.transactionDate)
+      txDate = isNaN(parsed.getTime()) ? parseDateString(tx.date) : parsed
+    } else {
+      txDate = parseDateString(tx.date)
+    }
+
+    // Must be within cycle boundaries and strictly before today (yesterday or earlier)
+    const inCycleRange = tx.date >= cycle.startDate && tx.date <= cycle.endDate
+    const isBeforeToday = tx.date < nowStr && (txDate < normalizedToday || tx.date < nowStr)
+
+    return isExpense && isNotFixedBill && inCycleRange && isBeforeToday
   })
 
-  // Step 2: Count unique days with actual spending transactions
+  // Step 2: Count unique days with actual spending transactions (Active Days) from past records
   const activeDaysSet = new Set<string>()
   let totalValidSpent = 0
 
@@ -167,13 +185,24 @@ export async function getCycleReportData(
 
   const activeSpendingDays = activeDaysSet.size
 
-  // Step 3: Compute average (safely handling activeSpendingDays === 0)
+  // Step 3: Compute average daily spend (safely handling activeSpendingDays === 0)
   const averageDailySpend =
     activeSpendingDays > 0 ? Math.round(totalValidSpent / activeSpendingDays) : 0
 
+  // Synchronize and retrieve daily limit snapshots for historical consistency
+  const dailyLimitSnapshots = syncCycleSnapshots({
+    cycle,
+    budgetVnd,
+    transactions,
+    todayStr: nowStr,
+  })
+
   // Step 4: Calculate Average Active Limit for dynamic benchmark comparison
-  // For each active day, get its exact limit (Past: baseDailyLimit, Today/Future: safeToSpend)
+  // For each past active day, get its exact limit (from snapshot if available, else baseDailyLimit)
   const getLimitForDate = (dateStr: DateString): number => {
+    if (dailyLimitSnapshots[dateStr] !== undefined) {
+      return dailyLimitSnapshots[dateStr]
+    }
     const cellDateObj = parseDateString(dateStr)
     if (isBefore(cellDateObj, todayDateObj)) {
       return baseDailyLimit
@@ -189,10 +218,10 @@ export async function getCycleReportData(
   const averageActiveLimit =
     activeSpendingDays > 0 ? Math.round(totalActiveLimit / activeSpendingDays) : baseDailyLimit
 
-  // 6. Standardized 3-State Time Logic:
-  // - Quá khứ (date < today): limit = baseDailyLimit (Hạn mức tĩnh gốc), balance = limit - spentOnDay
-  // - Hôm nay (date === today): limit = dynamicSafeToSpend (Hạn mức linh hoạt), balance = limit - spentOnDay
-  // - Tương lai (date > today): limit = dynamicSafeToSpend, balance = limit
+  // 6. Standardized 3-State Time Logic with Snapshot Data:
+  // - Bước 1: Kiểm tra xem ngày đó đã có Hạn mức Snapshot được lưu chưa.
+  // - Bước 2: Nếu ĐÃ CÓ snapshot, sử dụng giá trị snapshot đó làm Hạn mức (Limit) cho ngày đó.
+  // - Bước 3: Nếu CHƯA CÓ snapshot (ngày hôm nay chưa kết thúc, hoặc ngày tương lai), tính bằng Flex Budget (safeToSpend).
   const dailyItems: DayReportItem[] = cycle.days.map((date) => {
     const dayNumber = parseInt(date.slice(8), 10)
     const cellDateObj = parseDateString(date)
@@ -203,18 +232,17 @@ export async function getCycleReportData(
     const isToday = isSameDay(cellDateObj, todayDateObj)
     const isFuture = isAfter(cellDateObj, todayDateObj)
 
+    const snapshotLimit = dailyLimitSnapshots[date]
+
     let limitVnd: number
     let balanceVnd: number
 
-    if (isPast) {
-      limitVnd = baseDailyLimit
-      balanceVnd = limitVnd - spentVnd
-    } else if (isToday) {
-      limitVnd = safeToSpend
+    if (snapshotLimit !== undefined) {
+      limitVnd = snapshotLimit
       balanceVnd = limitVnd - spentVnd
     } else {
       limitVnd = safeToSpend
-      balanceVnd = limitVnd
+      balanceVnd = isFuture ? limitVnd : limitVnd - spentVnd
     }
 
     return {
@@ -265,5 +293,6 @@ export async function getCycleReportData(
     averageDailySpend,
     activeSpendingDays,
     averageActiveLimit,
+    dailyLimitSnapshots,
   }
 }
