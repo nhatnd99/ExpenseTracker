@@ -14,6 +14,7 @@ import {
 } from './settings-context'
 import type { QuickTemplate } from '@/types/models'
 import type { FixedBillItem } from '@/features/settings/types'
+import { normalizeFixedBills } from '@/features/settings/utils/fixedBillsUtils'
 import { formatCompactVnd } from '@/utils/currency'
 import { getActiveDailyLimit } from '@/features/monthly-plans/monthlyPlanService'
 import { useLocalStorage } from '@/hooks/useLocalStorage'
@@ -157,6 +158,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const [fixedBills, setFixedBillsState] = useLocalStorage<FixedBillItem[]>(
     FIXED_BILLS_STORAGE_KEY,
     DEFAULT_FIXED_BILLS,
+    normalizeFixedBills,
   )
 
   const setFixedBills = useCallback((bills: FixedBillItem[]) => {

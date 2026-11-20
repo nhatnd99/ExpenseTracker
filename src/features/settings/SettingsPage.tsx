@@ -38,6 +38,7 @@ import { LoadingSpinner } from '@/components/ui/LoadingSpinner'
 import { useBudgetCalculator } from './hooks/useBudgetCalculator'
 import { PercentageInput } from './components/PercentageInput'
 import { ManageFixedBillsModal } from './components/ManageFixedBillsModal'
+import { normalizeFixedBills, mergeBills } from './utils/fixedBillsUtils'
 import type { FixedBillItem } from './types'
 
 export function SettingsPage() {
@@ -166,12 +167,20 @@ export function SettingsPage() {
 
         // 1. Load fixed bills from localStorage (check month override, fallback to global default)
         try {
+          const storedDefault = localStorage.getItem('budget_fixed_bills_default')
+          const defaultBills = storedDefault ? normalizeFixedBills(JSON.parse(storedDefault)) : []
+
           const storedMonth = localStorage.getItem(`budget_fixed_bills_${currentCycleMonth}`)
           if (storedMonth) {
-            const parsed = JSON.parse(storedMonth) as FixedBillItem[]
-            if (Array.isArray(parsed) && parsed.length > 0) {
-              setFixedBills(parsed)
+            const parsed = JSON.parse(storedMonth)
+            const monthBills = normalizeFixedBills(parsed)
+            if (monthBills.length > 0) {
+              setFixedBills(mergeBills(defaultBills, monthBills))
+            } else if (defaultBills.length > 0) {
+              setFixedBills(defaultBills)
             }
+          } else if (defaultBills.length > 0) {
+            setFixedBills(defaultBills)
           }
         } catch {
           // keep current global fixedBills
@@ -938,6 +947,7 @@ export function SettingsPage() {
           bills={fixedBills}
           onSaveBills={handleSaveFixedBills}
           monthlyIncome={income}
+          initialMonth={currentCycleMonth}
         />
       )}
 
