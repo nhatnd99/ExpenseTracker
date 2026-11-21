@@ -6,6 +6,7 @@
 import { db } from '@/db/database'
 import type { BudgetCategory } from '@/types/models'
 import { CATEGORIES_STORAGE_KEY, DEFAULT_BUDGET_CATEGORIES } from '@/context/transaction-context'
+import { categoryRecordRepository } from './categoryRecordRepository'
 
 function getLocalStorageCategories(): BudgetCategory[] {
   try {
@@ -105,6 +106,7 @@ export const categoryRepository = {
   /** Deletes a category */
   async delete(id: string): Promise<void> {
     deleteCategoryFromLocalStorage(id)
+    await categoryRecordRepository.deleteByCategoryId(id)
     await db.categories.delete(id)
   },
 }

@@ -12,6 +12,8 @@ export interface CreateCategoryInput {
   icon?: string
   isFixedBill?: boolean
   type?: CategoryType
+  excludeFromExpenseTracking?: boolean
+  enableItemizedRecords?: boolean
 }
 
 export async function getAllCategories(): Promise<BudgetCategory[]> {
@@ -29,6 +31,8 @@ export async function addCategory(input: CreateCategoryInput): Promise<BudgetCat
     icon: input.icon?.trim() || '🏷️',
     isFixedBill: Boolean(input.isFixedBill),
     type: input.type ?? 'expense',
+    excludeFromExpenseTracking: Boolean(input.excludeFromExpenseTracking),
+    enableItemizedRecords: Boolean(input.enableItemizedRecords),
     sortOrder: maxSortOrder + 1,
     createdAt: now,
     updatedAt: now,
@@ -40,7 +44,18 @@ export async function addCategory(input: CreateCategoryInput): Promise<BudgetCat
 
 export async function updateCategory(
   id: string,
-  changes: Partial<Pick<BudgetCategory, 'name' | 'icon' | 'sortOrder' | 'isFixedBill' | 'type'>>,
+  changes: Partial<
+    Pick<
+      BudgetCategory,
+      | 'name'
+      | 'icon'
+      | 'sortOrder'
+      | 'isFixedBill'
+      | 'type'
+      | 'excludeFromExpenseTracking'
+      | 'enableItemizedRecords'
+    >
+  >,
 ): Promise<void> {
   await categoryRepository.update(id, changes)
 }

@@ -19,6 +19,7 @@ import { getPaydayCycle, computeCycleProgress, type PaydayCycle, type CycleBudge
 import { syncCycleSnapshots } from './snapshotService'
 import type { MonthId, DateString } from '@/types/models'
 import type { EnrichedTransaction } from '@/features/transactions/transactionService'
+import { getEffectiveCycleTransactions } from '@/features/categories/categoryRecordService'
 
 export interface DayReportItem {
   date: DateString
@@ -70,8 +71,15 @@ export async function getCycleReportData(
     categoryRepository.findAll(),
   ])
 
+  const effectiveTxs = await getEffectiveCycleTransactions(
+    rawTxs,
+    categories,
+    cycle.startDate,
+    cycle.endDate,
+  )
+
   const categoryMap = new Map(categories.map((c) => [c.id, c]))
-  const transactions: EnrichedTransaction[] = rawTxs.map((tx) => {
+  const transactions: EnrichedTransaction[] = effectiveTxs.map((tx) => {
     const cat = categoryMap.get(tx.categoryId)
     return {
       ...tx,

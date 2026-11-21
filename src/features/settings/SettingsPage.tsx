@@ -40,6 +40,10 @@ import { PercentageInput } from './components/PercentageInput'
 import { ManageFixedBillsModal } from './components/ManageFixedBillsModal'
 import { normalizeFixedBills, mergeBills } from './utils/fixedBillsUtils'
 import type { FixedBillItem } from './types'
+import type { CategoryRecord } from '@/types/models'
+import { categoryRecordRepository } from '@/repositories/categoryRecordRepository'
+import { CategoryManagerModal } from '@/features/transactions/components/CategoryManagerModal'
+import { ManageCategoryRecordsModal } from '@/features/categories/components/ManageCategoryRecordsModal'
 
 export function SettingsPage() {
   const { t } = useTranslation()
@@ -65,16 +69,18 @@ export function SettingsPage() {
   // Quick Templates Modal & Categories State
   const [isTemplateModalOpen, setIsTemplateModalOpen] = useState(false)
   const [allCategories, setAllCategories] = useState<BudgetCategory[]>([])
+  const [allRecords, setAllRecords] = useState<CategoryRecord[]>([])
+  const [selectedRecordCategory, setSelectedRecordCategory] = useState<BudgetCategory | null>(null)
+  const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false)
+
+  const reloadCategoriesAndRecords = React.useCallback(() => {
+    categoryRepository.findAll().then(setAllCategories).catch(() => {})
+    categoryRecordRepository.findAll().then(setAllRecords).catch(() => {})
+  }, [])
 
   useEffect(() => {
-    let active = true
-    categoryRepository.findAll().then((cats) => {
-      if (active) setAllCategories(cats)
-    }).catch(() => { })
-    return () => {
-      active = false
-    }
-  }, [])
+    reloadCategoriesAndRecords()
+  }, [reloadCategoriesAndRecords])
 
   // Monthly income initialized from persistent SettingsContext
   const [income, setIncome] = useState<number>(monthlyIncome || 10_000_000)
@@ -568,6 +574,63 @@ export function SettingsPage() {
                   </div>
 
                   {/* ===================================================
+                      INDEPENDENT ITEMIZED CATEGORIES (Excluded from tracking)
+                      Configurable custom categories with itemized records & excluded tracking
+                      =================================================== */}
+                  {allCategories
+                    .filter((c) => c.enableItemizedRecords && c.excludeFromExpenseTracking)
+                    .map((cat) => {
+                      const catRecords = allRecords.filter(
+                        (r) => r.categoryId === cat.id && r.date.startsWith(currentCycleMonth)
+                      )
+                      const catTotal = catRecords.reduce((sum, r) => sum + r.amount, 0)
+                      return (
+                        <div
+                          key={cat.id}
+                          role="button"
+                          tabIndex={0}
+                          onClick={() => setSelectedRecordCategory(cat)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' || e.key === ' ') {
+                              setSelectedRecordCategory(cat)
+                            }
+                          }}
+                          className="rounded-2xl border-2 border-purple-500/30 bg-[var(--color-bg-surface)] p-3.5 space-y-2.5 box-border cursor-pointer hover:border-purple-500 transition-all active:scale-[0.99] shadow-2xs group"
+                        >
+                          <div className="flex items-center justify-between gap-2.5 sm:gap-3 w-full">
+                            <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 flex-1">
+                              <span className="flex h-7 w-7 items-center justify-center rounded-xl bg-purple-500/15 text-sm shadow-2xs shrink-0 text-purple-600 dark:text-purple-400">
+                                <CategoryIconRenderer icon={cat.icon || 'Layers'} size={16} />
+                              </span>
+                              <div className="flex items-center gap-1.5 min-w-0 flex-1 flex-wrap">
+                                <span className="font-bold text-xs text-[var(--color-text-primary)] whitespace-normal break-words group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors">
+                                  {cat.name}
+                                </span>
+                                <span className="text-[10px] font-semibold text-purple-600 dark:text-purple-400 bg-purple-500/15 px-1.5 py-0.5 rounded-md shrink-0 border border-purple-500/20 inline-flex items-center gap-0.5">
+                                  <span>{catRecords.length} {t('records.itemsUnit', 'khoản')}</span>
+                                </span>
+                              </div>
+                            </div>
+
+                            <span className="text-[11px] font-bold text-purple-600 dark:text-purple-400 bg-purple-500/10 px-2 py-1 rounded-xl border border-purple-500/20 shrink-0">
+                              {t('transactions.excludedBadge', 'Tách riêng')}
+                            </span>
+                          </div>
+
+                          <div className="flex items-center justify-between pt-2 border-t border-[var(--color-border)]/60 text-xs">
+                            <span className="text-[11px] text-purple-600 dark:text-purple-400 group-hover:underline flex items-center gap-1">
+                              <span>{t('records.clickToManage', 'Chạm để sửa chi tiết các khoản')}</span>
+                              <span>→</span>
+                            </span>
+                            <span className="font-bold text-xs text-[var(--color-text-primary)] amount-display">
+                              {formatVnd(catTotal)}
+                            </span>
+                          </div>
+                        </div>
+                      )
+                    })}
+
+                  {/* ===================================================
                       CATEGORY 3: Savings (Mandatory Default)
                       =================================================== */}
                   <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg-subtle)] p-3.5 space-y-2.5 box-border">
@@ -606,6 +669,7 @@ export function SettingsPage() {
                       =================================================== */}
                   {customItems.map((item) => {
                     const itemAllocated = Math.round((income * item.percent) / 100)
+                    const catDef = allCategories.find((c) => c.id === item.id)
                     return (
                       <div
                         key={item.id}
@@ -643,9 +707,20 @@ export function SettingsPage() {
                         </div>
 
                         <div className="flex items-center justify-between pt-2 border-t border-[var(--color-border)]/60 text-xs">
-                          <span className="text-[11px] text-[var(--color-text-muted)]">
-                            {t('plan.allocatedAmount', 'Số tiền phân bổ')}:
-                          </span>
+                          {catDef?.enableItemizedRecords ? (
+                            <button
+                              type="button"
+                              onClick={() => setSelectedRecordCategory(catDef)}
+                              className="text-[11px] text-[var(--color-primary)] hover:underline flex items-center gap-1 cursor-pointer"
+                            >
+                              <span>{t('records.clickToManage', 'Chạm để sửa chi tiết các khoản')}</span>
+                              <span>→</span>
+                            </button>
+                          ) : (
+                            <span className="text-[11px] text-[var(--color-text-muted)]">
+                              {t('plan.allocatedAmount', 'Số tiền phân bổ')}:
+                            </span>
+                          )}
                           <span className="font-bold text-xs text-[var(--color-text-primary)] amount-display">
                             {formatVnd(itemAllocated)}
                           </span>
@@ -654,15 +729,26 @@ export function SettingsPage() {
                     )
                   })}
 
-                  {/* Add Custom Category Button */}
-                  <button
-                    type="button"
-                    onClick={() => addCustomItem(t('plan.newCategoryDefaultName', { index: customItems.length + 1 }))}
-                    className="w-full py-2.5 rounded-2xl border border-dashed border-[var(--color-border)] bg-[var(--color-bg-subtle)] text-xs font-bold text-[var(--color-primary)] hover:bg-[var(--color-border)] active:scale-[0.99] transition-all flex items-center justify-center gap-1.5 cursor-pointer box-border"
-                  >
-                    <Plus className="h-4 w-4" />
-                    <span>{t('plan.addCategory', 'Thêm Danh Mục Phân Bổ')}</span>
-                  </button>
+                  {/* Category Actions Row */}
+                  <div className="flex items-center gap-2 pt-1">
+                    <button
+                      type="button"
+                      onClick={() => addCustomItem(t('plan.newCategoryDefaultName', { index: customItems.length + 1 }))}
+                      className="flex-1 py-2.5 rounded-2xl border border-dashed border-[var(--color-border)] bg-[var(--color-bg-subtle)] text-xs font-bold text-[var(--color-primary)] hover:bg-[var(--color-border)] active:scale-[0.99] transition-all flex items-center justify-center gap-1.5 cursor-pointer box-border"
+                    >
+                      <Plus className="h-4 w-4" />
+                      <span>{t('plan.addCategory', 'Thêm Danh Mục Phân Bổ')}</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setIsCategoryModalOpen(true)}
+                      className="py-2.5 px-3 rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg-subtle)] text-xs font-bold text-[var(--color-text-secondary)] hover:text-[var(--color-primary)] hover:bg-[var(--color-border)] active:scale-[0.99] transition-all flex items-center justify-center gap-1.5 cursor-pointer box-border shrink-0"
+                      title={t('transactions.categoryManagerTitle', 'Quản Lý Danh Mục')}
+                    >
+                      <Settings2 className="h-4 w-4" />
+                      <span className="hidden sm:inline">{t('transactions.categoryManagerTitle', 'Quản Lý Danh Mục')}</span>
+                    </button>
+                  </div>
                 </div>
 
                 {budgetErrorMsg && (
@@ -957,6 +1043,27 @@ export function SettingsPage() {
         onClose={() => setIsTemplateModalOpen(false)}
         categories={allCategories}
       />
+
+      {/* Category Manager Modal */}
+      <CategoryManagerModal
+        isOpen={isCategoryModalOpen}
+        onClose={() => setIsCategoryModalOpen(false)}
+        categories={allCategories}
+        onCategoriesChanged={reloadCategoriesAndRecords}
+      />
+
+      {/* Itemized Category Records Modal */}
+      {selectedRecordCategory && (
+        <ManageCategoryRecordsModal
+          isOpen={Boolean(selectedRecordCategory)}
+          onClose={() => setSelectedRecordCategory(null)}
+          categoryId={selectedRecordCategory.id}
+          categoryName={selectedRecordCategory.name}
+          categoryIcon={selectedRecordCategory.icon}
+          initialMonth={currentCycleMonth}
+          onRecordsChanged={reloadCategoriesAndRecords}
+        />
+      )}
     </PageContainer>
   )
 }

@@ -60,6 +60,10 @@ export interface BudgetCategory {
   type?: CategoryType
   /** Whether expenses in this category are fixed bills/large expenses (excluded from daily limit by default) */
   isFixedBill?: boolean
+  /** Exclude category from regular expense tracking, reports, and daily spending calculations */
+  excludeFromExpenseTracking?: boolean
+  /** Allow adding, editing, and deleting individual records with name, amount, date, and optional notes */
+  enableItemizedRecords?: boolean
   /** Display order */
   sortOrder: number
   createdAt: string
@@ -168,3 +172,19 @@ export interface MonthlyBudgetSummary {
   expectedSpentByTodayVnd: number
   isOverBudget: boolean
 }
+
+// ---------------------------------------------------------------------------
+// Category Record (Itemized Records for configurable categories)
+// ---------------------------------------------------------------------------
+
+export interface CategoryRecord {
+  id: string
+  categoryId: string
+  name: string
+  amount: number
+  date: string // "YYYY-MM-DD"
+  note?: string
+  createdAt: string
+  updatedAt: string
+}
+

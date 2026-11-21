@@ -18,6 +18,7 @@ import { getPaydayCycle, type PaydayCycle } from '@/features/reports/paydayCycle
 import type { MonthId, MonthlyBudgetSummary, DailyBudgetStatus, DateString, Transaction } from '@/types/models'
 import type { EnrichedTransaction } from '@/features/transactions/transactionService'
 import { getTodayString, compareTransactionsDesc } from '@/services/dateService'
+import { getEffectiveCycleTransactions } from '@/features/categories/categoryRecordService'
 
 export interface DashboardData {
   summary: MonthlyBudgetSummary
@@ -42,10 +43,18 @@ export async function getDashboardData(
   if (!plan) return null
 
   const cycle = getPaydayCycle(month, payDay)
-  const [transactions, categories] = await Promise.all([
+  const [rawTransactions, categories] = await Promise.all([
     transactionRepository.findByDateRange(cycle.startDate, cycle.endDate),
     categoryRepository.findAll(),
   ])
+
+  const transactions = await getEffectiveCycleTransactions(
+    rawTransactions,
+    categories,
+    cycle.startDate,
+    cycle.endDate,
+    plan.id,
+  )
 
   const categoryMap = new Map(categories.map((c) => [c.id, c]))
   const totalSpentVnd = calculateTotalMonthlySpent(transactions)
