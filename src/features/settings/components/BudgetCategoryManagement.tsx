@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   X,
@@ -11,6 +11,7 @@ import {
   ClipboardList,
   EyeOff,
   Layers,
+  Lock,
 } from 'lucide-react'
 import type { BudgetCategory } from '@/types/models'
 import {
@@ -19,6 +20,10 @@ import {
   reorderBudgetCategories,
   validateBudgetCategoryInput,
 } from '@/features/categories/budget/budgetCategoryService'
+import {
+  isBaseBudgetCategory,
+  DEFAULT_BUDGET_PLAN_CATEGORIES,
+} from '@/repositories/budgetCategoryRepository'
 import { categoryRecordRepository } from '@/repositories/categoryRecordRepository'
 import { CATEGORY_ICON_GROUPS } from '@/constants/categoryIcons'
 import { CategoryIconRenderer } from '@/components/ui/CategoryIconRenderer'
@@ -55,9 +60,36 @@ export const BudgetCategoryManagement: React.FC<BudgetCategoryManagementProps> =
   // Active Category for ManageCategoryRecordsModal
   const [activeRecordModalCategory, setActiveRecordModalCategory] = useState<BudgetCategory | null>(null)
 
-  const budgetCategories = categories.filter((c) => c.type !== 'income')
+  // Split into locked System Categories (1, 2, 3) and reorderable Custom Categories (4+)
+  const { systemCategories, customCategories } = useMemo(() => {
+    const nonIncome = categories.filter((c) => c.type !== 'income')
+    const byId = new Map(nonIncome.map((c) => [c.id, c]))
+
+    const system: BudgetCategory[] = DEFAULT_BUDGET_PLAN_CATEGORIES.map((def, idx) => {
+      const existing = byId.get(def.id)
+      return existing ? { ...existing, sortOrder: idx + 1 } : { ...def, sortOrder: idx + 1 }
+    })
+
+    const custom = nonIncome
+      .filter((c) => !isBaseBudgetCategory(c.id))
+      .sort((a, b) => a.sortOrder - b.sortOrder)
+      .map((c, idx) => ({
+        ...c,
+        sortOrder: DEFAULT_BUDGET_PLAN_CATEGORIES.length + idx + 1,
+      }))
+
+    return { systemCategories: system, customCategories: custom }
+  }, [categories])
+
+  const getSystemDisplayName = (cat: BudgetCategory): string => {
+    if (cat.id === 'cat-expenses') return t('plan.cat_expenses', 'Chi Tiêu Hàng Ngày (Daily Expenses)')
+    if (cat.id === 'cat-fixed') return t('plan.cat_fixed', 'Hóa Đơn Cố Định (Fixed Bills)')
+    if (cat.id === 'cat-savings') return t('plan.cat_savings', 'Tiết Kiệm (Savings)')
+    return cat.name
+  }
 
   const handleStartEdit = (cat: BudgetCategory) => {
+    if (isBaseBudgetCategory(cat.id)) return
     setEditingCategory(cat)
     setEditName(cat.name)
     setEditIcon(cat.icon || 'Utensils')
@@ -117,6 +149,7 @@ export const BudgetCategoryManagement: React.FC<BudgetCategoryManagementProps> =
   }
 
   const handleToggleFixedBill = async (cat: BudgetCategory) => {
+    if (isBaseBudgetCategory(cat.id)) return
     const nextFixed = !Boolean(cat.isFixedBill)
     try {
       await updateBudgetCategory(cat.id, { isFixedBill: nextFixed })
@@ -130,6 +163,7 @@ export const BudgetCategoryManagement: React.FC<BudgetCategoryManagementProps> =
   }
 
   const handleDelete = async (id: string, name: string) => {
+    if (isBaseBudgetCategory(id)) return
     if (
       !confirm(
         t('transactions.deleteCategoryConfirm', {
@@ -151,22 +185,17 @@ export const BudgetCategoryManagement: React.FC<BudgetCategoryManagementProps> =
     }
   }
 
-  const handleMove = async (index: number, direction: 'up' | 'down') => {
-    const targetIndex = direction === 'up' ? index - 1 : index + 1
-    if (targetIndex < 0 || targetIndex >= budgetCategories.length) return
+  // Reorder ONLY within customCategories (positions 4+)
+  const handleMoveCustom = async (customIndex: number, direction: 'up' | 'down') => {
+    const targetIndex = direction === 'up' ? customIndex - 1 : customIndex + 1
+    if (targetIndex < 0 || targetIndex >= customCategories.length) return
 
-    const itemA = budgetCategories[index]
-    const itemB = budgetCategories[targetIndex]
-    const fullIndexA = categories.findIndex((c) => c.id === itemA.id)
-    const fullIndexB = categories.findIndex((c) => c.id === itemB.id)
-    if (fullIndexA === -1 || fullIndexB === -1) return
+    const reorderedCustom = [...customCategories]
+    const temp = reorderedCustom[customIndex]
+    reorderedCustom[customIndex] = reorderedCustom[targetIndex]
+    reorderedCustom[targetIndex] = temp
 
-    const reordered = [...categories]
-    const temp = reordered[fullIndexA]
-    reordered[fullIndexA] = reordered[fullIndexB]
-    reordered[fullIndexB] = temp
-
-    await reorderBudgetCategories(reordered)
+    await reorderBudgetCategories(reorderedCustom)
     onCategoriesChanged({ type: 'reordered' })
   }
 
@@ -176,120 +205,186 @@ export const BudgetCategoryManagement: React.FC<BudgetCategoryManagementProps> =
 
   return (
     <>
-      <div className="space-y-2 w-full max-w-full box-border">
-        <span className="text-xs font-bold text-[var(--color-text-secondary)] uppercase tracking-wider px-1 block">
-          {t('transactions.categoryOrder', 'Thứ tự hiển thị')} ({budgetCategories.length})
-        </span>
+      <div className="space-y-4 w-full max-w-full box-border">
+        {/* Section Header */}
+        <div className="flex items-center justify-between px-1">
+          <span className="text-xs font-bold text-[var(--color-text-secondary)] uppercase tracking-wider">
+            {t('transactions.categoryOrder', 'Thứ tự hiển thị')} ({systemCategories.length + customCategories.length})
+          </span>
+        </div>
 
-        {budgetCategories.length === 0 ? (
-          <p className="text-xs text-[var(--color-text-muted)]">
-            {t('transactions.categoryEmpty', 'Chưa có danh mục nào.')}
-          </p>
-        ) : (
-          <div className="divide-y divide-[var(--color-border)] rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg-surface)] overflow-hidden w-full max-w-full box-border">
-            {budgetCategories.map((cat, idx) => (
+        {/* 1. System Categories (Locked positions 1, 2, 3) */}
+        <div className="space-y-1.5">
+          <span className="text-[11px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider px-1 block">
+            {t('plan.systemCategoriesTitle', 'Danh mục hệ thống')} ({systemCategories.length})
+          </span>
+          <div
+            data-testid="system-budget-categories-list"
+            className="divide-y divide-[var(--color-border)] rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg-subtle)]/70 overflow-hidden w-full max-w-full box-border"
+          >
+            {systemCategories.map((cat) => (
               <div
                 key={cat.id}
-                className="p-2.5 sm:p-3 space-y-2 w-full max-w-full box-border hover:bg-[var(--color-bg-subtle)] transition-colors"
+                data-testid={`system-category-row-${cat.id}`}
+                className="p-2.5 sm:px-3.5 flex items-center justify-between gap-2.5 w-full max-w-full box-border"
               >
-                <div className="flex items-center justify-between gap-2 w-full">
-                  <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                    <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-[var(--color-bg-subtle)] text-lg shrink-0 text-[var(--color-primary)]">
-                      <CategoryIconRenderer icon={cat.icon} size={18} />
-                    </span>
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-1.5 flex-wrap">
-                        <span className="text-sm font-semibold text-[var(--color-text-primary)] truncate">
-                          {cat.name}
-                        </span>
-                        {cat.isFixedBill && (
-                          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-[var(--color-primary-soft)] text-[var(--color-primary)] border border-[var(--color-primary)]/20 shrink-0 inline-flex items-center gap-0.5">
-                            <Receipt className="h-3 w-3" />
-                            <span>{t('transactions.fixedBillBadge', 'Hóa đơn')}</span>
+                <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                  <span
+                    data-testid={`category-position-${cat.id}`}
+                    className="flex h-6 w-6 items-center justify-center rounded-lg bg-[var(--color-bg-surface)] border border-[var(--color-border)] text-[11px] font-extrabold text-[var(--color-text-muted)] shrink-0"
+                  >
+                    {cat.sortOrder}
+                  </span>
+                  <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-[var(--color-bg-surface)] text-base shrink-0 text-[var(--color-primary)]">
+                    <CategoryIconRenderer icon={cat.icon} size={16} />
+                  </span>
+                  <span className="text-xs sm:text-sm font-semibold text-[var(--color-text-primary)] truncate">
+                    {getSystemDisplayName(cat)}
+                  </span>
+                </div>
+
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-[var(--color-bg-surface)] border border-[var(--color-border)] text-[10px] font-bold text-[var(--color-text-muted)] shrink-0">
+                  <Lock className="h-3 w-3" />
+                  <span>{t('plan.systemBadge', 'Hệ thống')}</span>
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* 2. Custom Categories (Reorderable starting at position 4) */}
+        <div className="space-y-1.5">
+          <span className="text-[11px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider px-1 block">
+            {t('plan.customCategoriesTitle', 'Danh mục tùy chỉnh')} ({customCategories.length})
+          </span>
+
+          {customCategories.length === 0 ? (
+            <div className="rounded-2xl border border-dashed border-[var(--color-border)] bg-[var(--color-bg-subtle)]/40 p-4 text-center">
+              <p className="text-xs text-[var(--color-text-muted)]">
+                {t(
+                  'plan.customCategoriesEmpty',
+                  'Chưa có danh mục tùy chỉnh nào. Thêm danh mục mới ở trên (bắt đầu từ vị trí 4).',
+                )}
+              </p>
+            </div>
+          ) : (
+            <div
+              data-testid="custom-budget-categories-list"
+              className="divide-y divide-[var(--color-border)] rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg-surface)] overflow-hidden w-full max-w-full box-border shadow-2xs"
+            >
+              {customCategories.map((cat, idx) => (
+                <div
+                  key={cat.id}
+                  data-testid={`custom-category-row-${cat.id}`}
+                  className="p-2.5 sm:p-3 space-y-2 w-full max-w-full box-border hover:bg-[var(--color-bg-subtle)] transition-colors"
+                >
+                  <div className="flex items-center justify-between gap-2 w-full">
+                    <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                      <span
+                        data-testid={`category-position-${cat.id}`}
+                        className="flex h-6 w-6 items-center justify-center rounded-lg bg-[var(--color-primary-soft)] border border-[var(--color-primary)]/20 text-[11px] font-extrabold text-[var(--color-primary)] shrink-0"
+                      >
+                        {cat.sortOrder}
+                      </span>
+                      <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-[var(--color-bg-subtle)] text-lg shrink-0 text-[var(--color-primary)]">
+                        <CategoryIconRenderer icon={cat.icon} size={18} />
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span className="text-sm font-semibold text-[var(--color-text-primary)] truncate">
+                            {cat.name}
                           </span>
-                        )}
-                        {cat.excludeFromExpenseTracking && (
-                          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20 shrink-0 inline-flex items-center gap-0.5">
-                            <EyeOff className="h-3 w-3" />
-                            <span>{t('transactions.excludedBadge', 'Tách riêng')}</span>
-                          </span>
-                        )}
-                        {cat.enableItemizedRecords && (
-                          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 shrink-0 inline-flex items-center gap-0.5">
-                            <Layers className="h-3 w-3" />
-                            <span>{t('transactions.itemizedBadge', 'Ghi chép')}</span>
-                          </span>
-                        )}
+                          {cat.isFixedBill && (
+                            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-[var(--color-primary-soft)] text-[var(--color-primary)] border border-[var(--color-primary)]/20 shrink-0 inline-flex items-center gap-0.5">
+                              <Receipt className="h-3 w-3" />
+                              <span>{t('transactions.fixedBillBadge', 'Hóa đơn')}</span>
+                            </span>
+                          )}
+                          {cat.excludeFromExpenseTracking && (
+                            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20 shrink-0 inline-flex items-center gap-0.5">
+                              <EyeOff className="h-3 w-3" />
+                              <span>{t('transactions.excludedBadge', 'Tách riêng')}</span>
+                            </span>
+                          )}
+                          {cat.enableItemizedRecords && (
+                            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 shrink-0 inline-flex items-center gap-0.5">
+                              <Layers className="h-3 w-3" />
+                              <span>{t('transactions.itemizedBadge', 'Ghi chép')}</span>
+                            </span>
+                          )}
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => void handleToggleFixedBill(cat)}
+                          className="text-[10px] text-[var(--color-text-muted)] hover:text-[var(--color-primary)] hover:underline block text-left mt-0.5 cursor-pointer"
+                        >
+                          {cat.isFixedBill
+                            ? t('transactions.markAsDaily', 'Đổi sang chi tiêu ngày')
+                            : t('transactions.markAsFixedBill', 'Đổi sang hóa đơn lớn')}
+                        </button>
                       </div>
+                    </div>
+
+                    <div className="flex items-center gap-0.5 shrink-0">
                       <button
                         type="button"
-                        onClick={() => void handleToggleFixedBill(cat)}
-                        className="text-[10px] text-[var(--color-text-muted)] hover:text-[var(--color-primary)] hover:underline block text-left mt-0.5 cursor-pointer"
+                        data-testid={`budget-category-move-up-${cat.id}`}
+                        disabled={idx === 0}
+                        onClick={() => void handleMoveCustom(idx, 'up')}
+                        aria-label={t('plan.moveUp', 'Di chuyển lên')}
+                        className="flex h-8 w-8 items-center justify-center rounded-lg text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-subtle)] active:scale-95 disabled:opacity-20 disabled:cursor-not-allowed cursor-pointer"
                       >
-                        {cat.isFixedBill
-                          ? t('transactions.markAsDaily', 'Đổi sang chi tiêu ngày')
-                          : t('transactions.markAsFixedBill', 'Đổi sang hóa đơn lớn')}
+                        <ArrowUp className="h-4 w-4" />
+                      </button>
+                      <button
+                        type="button"
+                        data-testid={`budget-category-move-down-${cat.id}`}
+                        disabled={idx === customCategories.length - 1}
+                        onClick={() => void handleMoveCustom(idx, 'down')}
+                        aria-label={t('plan.moveDown', 'Di chuyển xuống')}
+                        className="flex h-8 w-8 items-center justify-center rounded-lg text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-subtle)] active:scale-95 disabled:opacity-20 disabled:cursor-not-allowed cursor-pointer"
+                      >
+                        <ArrowDown className="h-4 w-4" />
+                      </button>
+                      <button
+                        type="button"
+                        data-testid={`budget-category-edit-${cat.id}`}
+                        onClick={() => handleStartEdit(cat)}
+                        aria-label={t('common.edit', 'Sửa')}
+                        className="flex h-8 w-8 items-center justify-center rounded-lg text-[var(--color-text-secondary)] hover:text-[var(--color-primary)] hover:bg-[var(--color-bg-subtle)] active:scale-95 cursor-pointer"
+                      >
+                        <Edit2 className="h-4 w-4" />
+                      </button>
+                      <button
+                        type="button"
+                        data-testid={`budget-category-delete-${cat.id}`}
+                        onClick={() => void handleDelete(cat.id, cat.name)}
+                        aria-label={t('common.delete', 'Xóa')}
+                        className="flex h-8 w-8 items-center justify-center rounded-lg text-[var(--color-text-muted)] hover:bg-[var(--color-expense-soft)] hover:text-[var(--color-expense)] active:scale-95 cursor-pointer"
+                      >
+                        <Trash2 className="h-4 w-4" />
                       </button>
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-0.5 shrink-0">
-                    <button
-                      type="button"
-                      disabled={idx === 0}
-                      onClick={() => void handleMove(idx, 'up')}
-                      aria-label={t('plan.moveUp', 'Di chuyển lên')}
-                      className="flex h-8 w-8 items-center justify-center rounded-lg text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-subtle)] disabled:opacity-20 cursor-pointer"
-                    >
-                      <ArrowUp className="h-4 w-4" />
-                    </button>
-                    <button
-                      type="button"
-                      disabled={idx === budgetCategories.length - 1}
-                      onClick={() => void handleMove(idx, 'down')}
-                      aria-label={t('plan.moveDown', 'Di chuyển xuống')}
-                      className="flex h-8 w-8 items-center justify-center rounded-lg text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-subtle)] disabled:opacity-20 cursor-pointer"
-                    >
-                      <ArrowDown className="h-4 w-4" />
-                    </button>
-                    <button
-                      type="button"
-                      data-testid={`budget-category-edit-${cat.id}`}
-                      onClick={() => handleStartEdit(cat)}
-                      aria-label={t('common.edit', 'Sửa')}
-                      className="flex h-8 w-8 items-center justify-center rounded-lg text-[var(--color-text-secondary)] hover:text-[var(--color-primary)] hover:bg-[var(--color-bg-subtle)] cursor-pointer"
-                    >
-                      <Edit2 className="h-4 w-4" />
-                    </button>
-                    <button
-                      type="button"
-                      data-testid={`budget-category-delete-${cat.id}`}
-                      onClick={() => void handleDelete(cat.id, cat.name)}
-                      aria-label={t('common.delete', 'Xóa')}
-                      className="flex h-8 w-8 items-center justify-center rounded-lg text-[var(--color-text-muted)] hover:bg-[var(--color-expense-soft)] hover:text-[var(--color-expense)] cursor-pointer"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </button>
-                  </div>
+                  {cat.enableItemizedRecords && (
+                    <div className="pt-1 flex items-center justify-end">
+                      <button
+                        type="button"
+                        data-testid={`budget-category-manage-records-${cat.id}`}
+                        onClick={() => setActiveRecordModalCategory(cat)}
+                        className="text-xs font-bold text-[var(--color-primary)] bg-[var(--color-primary-soft)] hover:bg-[var(--color-primary)] hover:text-white px-2.5 py-1 rounded-xl border border-[var(--color-primary)]/20 transition-all flex items-center gap-1.5 cursor-pointer"
+                      >
+                        <ClipboardList className="h-3.5 w-3.5" />
+                        <span>{t('transactions.manageRecords', 'Quản lý ghi chép')}</span>
+                      </button>
+                    </div>
+                  )}
                 </div>
-
-                {cat.enableItemizedRecords && (
-                  <div className="pt-1 flex items-center justify-end">
-                    <button
-                      type="button"
-                      data-testid={`budget-category-manage-records-${cat.id}`}
-                      onClick={() => setActiveRecordModalCategory(cat)}
-                      className="text-xs font-bold text-[var(--color-primary)] bg-[var(--color-primary-soft)] hover:bg-[var(--color-primary)] hover:text-white px-2.5 py-1 rounded-xl border border-[var(--color-primary)]/20 transition-all flex items-center gap-1.5 cursor-pointer"
-                    >
-                      <ClipboardList className="h-3.5 w-3.5" />
-                      <span>{t('transactions.manageRecords', 'Quản lý ghi chép')}</span>
-                    </button>
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-        )}
+              ))}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Edit Budget Category Dialog */}
@@ -341,8 +436,8 @@ export const BudgetCategoryManagement: React.FC<BudgetCategoryManagementProps> =
                 ))}
               </div>
 
-              <div className="h-24 overflow-y-auto overflow-x-hidden rounded-xl border border-[var(--color-border)] bg-[var(--color-bg-surface)] p-2">
-                <div className="grid grid-cols-6 gap-1.5">
+              <div className="h-20 overflow-y-auto overflow-x-hidden rounded-xl border border-[var(--color-border)] bg-[var(--color-bg-surface)] p-2">
+                <div className="grid grid-cols-6 sm:grid-cols-8 gap-1.5">
                   {editGroupIcons.map((item) => {
                     const isSelected = editIcon === item.lucideName || editIcon === item.id
                     return (
@@ -363,23 +458,28 @@ export const BudgetCategoryManagement: React.FC<BudgetCategoryManagementProps> =
                 </div>
               </div>
 
-              <label className="flex items-start gap-2.5 p-2.5 rounded-xl bg-[var(--color-bg-subtle)] border border-[var(--color-border)] cursor-pointer">
-                <input
-                  type="checkbox"
-                  data-testid="budget-edit-fixed-bill-checkbox"
-                  checked={editIsFixedBill}
-                  onChange={(e) => setEditIsFixedBill(e.target.checked)}
-                  className="mt-0.5 h-4 w-4 rounded border-[var(--color-border)] text-[var(--color-primary)] accent-[var(--color-primary)] shrink-0 cursor-pointer"
-                />
-                <div className="min-w-0 flex-1">
-                  <span className="text-xs font-bold text-[var(--color-text-primary)] block">
-                    {t('transactions.isFixedBillLabel', 'Là hóa đơn / chi phí lớn')}
-                  </span>
-                  <span className="text-[11px] text-[var(--color-text-muted)] block leading-tight">
-                    {t('transactions.isFixedBillHelp', 'Không trừ vào Hạn mức ăn tiêu hằng ngày')}
-                  </span>
-                </div>
-              </label>
+              <div className="space-y-2 pt-2 border-t border-[var(--color-border)]">
+                <span className="text-[11px] font-bold text-[var(--color-text-secondary)] uppercase tracking-wider block">
+                  {t('plan.categoryConfigTitle', 'Cấu hình danh mục')}
+                </span>
+                <label className="flex items-start gap-2.5 p-2.5 rounded-xl bg-[var(--color-bg-subtle)] border border-[var(--color-border)] cursor-pointer">
+                  <input
+                    type="checkbox"
+                    data-testid="budget-edit-fixed-bill-checkbox"
+                    checked={editIsFixedBill}
+                    onChange={(e) => setEditIsFixedBill(e.target.checked)}
+                    className="mt-0.5 h-4 w-4 rounded border-[var(--color-border)] text-[var(--color-primary)] accent-[var(--color-primary)] shrink-0 cursor-pointer"
+                  />
+                  <div className="min-w-0 flex-1">
+                    <span className="text-xs font-bold text-[var(--color-text-primary)] block">
+                      {t('transactions.isFixedBillLabel', 'Là hóa đơn / chi phí lớn')}
+                    </span>
+                    <span className="text-[11px] text-[var(--color-text-muted)] block leading-tight">
+                      {t('transactions.isFixedBillHelp', 'Không trừ vào Hạn mức ăn tiêu hằng ngày')}
+                    </span>
+                  </div>
+                </label>
+              </div>
 
               <div className="space-y-2 pt-2 border-t border-[var(--color-border)]">
                 <span className="text-[11px] font-bold text-[var(--color-text-secondary)] uppercase tracking-wider block">

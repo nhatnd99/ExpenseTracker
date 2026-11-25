@@ -2,9 +2,16 @@
  * budgetCategoryService.ts
  * Independent business logic and validation for Monthly Budget Plan categories
  * used on Settings -> Monthly Budget Plan.
+ *
+ * Enforces Base Category lock (positions 1, 2, 3) and sequential Custom Category
+ * ordering starting at position 4.
  */
 import { crypto } from '@/utils/crypto'
-import { budgetCategoryRepository } from '@/repositories/budgetCategoryRepository'
+import {
+  budgetCategoryRepository,
+  BASE_BUDGET_CATEGORY_IDS,
+  isBaseBudgetCategory,
+} from '@/repositories/budgetCategoryRepository'
 import type { BudgetCategory, CategoryType } from '@/types/models'
 
 export interface CreateBudgetCategoryInput {
@@ -42,7 +49,10 @@ export async function addBudgetCategory(input: CreateBudgetCategoryInput): Promi
   }
 
   const existing = await budgetCategoryRepository.findAll()
-  const maxSortOrder = existing.reduce((max, c) => Math.max(max, c.sortOrder), 0)
+  const maxCustomOrder = existing.reduce<number>(
+    (max, c) => (isBaseBudgetCategory(c.id) ? max : Math.max(max, c.sortOrder)),
+    BASE_BUDGET_CATEGORY_IDS.length,
+  )
 
   const now = new Date().toISOString()
   const newCategory: BudgetCategory = {
@@ -50,16 +60,17 @@ export async function addBudgetCategory(input: CreateBudgetCategoryInput): Promi
     name: input.name.trim(),
     icon: input.icon?.trim() || '🏷️',
     isFixedBill: Boolean(input.isFixedBill),
-    type: input.type ?? 'expense',
+    type: 'expense',
     excludeFromExpenseTracking: Boolean(input.excludeFromExpenseTracking),
     enableItemizedRecords: Boolean(input.enableItemizedRecords),
-    sortOrder: maxSortOrder + 1,
+    sortOrder: maxCustomOrder + 1,
     createdAt: now,
     updatedAt: now,
   }
 
   await budgetCategoryRepository.create(newCategory)
-  return newCategory
+  const stored = await budgetCategoryRepository.findById(newCategory.id)
+  return stored ?? newCategory
 }
 
 export async function updateBudgetCategory(
@@ -69,9 +80,7 @@ export async function updateBudgetCategory(
       BudgetCategory,
       | 'name'
       | 'icon'
-      | 'sortOrder'
       | 'isFixedBill'
-      | 'type'
       | 'excludeFromExpenseTracking'
       | 'enableItemizedRecords'
     >
@@ -87,9 +96,12 @@ export async function updateBudgetCategory(
 }
 
 export async function deleteBudgetCategory(id: string): Promise<void> {
+  if (isBaseBudgetCategory(id)) {
+    throw new Error('Base budget categories cannot be deleted.')
+  }
   await budgetCategoryRepository.delete(id)
 }
 
-export async function reorderBudgetCategories(orderedCategories: BudgetCategory[]): Promise<void> {
-  await budgetCategoryRepository.reorder(orderedCategories)
+export async function reorderBudgetCategories(orderedCustomCategories: BudgetCategory[]): Promise<void> {
+  await budgetCategoryRepository.reorder(orderedCustomCategories)
 }

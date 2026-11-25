@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Plus } from 'lucide-react'
+import { Plus, SlidersHorizontal, Sparkles } from 'lucide-react'
 import type { BudgetCategory } from '@/types/models'
 import {
   addBudgetCategory,
@@ -64,151 +64,168 @@ export const BudgetCategoryForm: React.FC<BudgetCategoryFormProps> = ({
   return (
     <form
       onSubmit={handleAdd}
-      className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg-subtle)] p-3 space-y-3 w-full max-w-full box-border overflow-hidden"
+      className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg-subtle)] p-3.5 space-y-3 w-full max-w-full box-border"
     >
-      <span className="text-xs font-bold text-[var(--color-text-secondary)] uppercase tracking-wider block">
-        {t('plan.newBudgetCategoryTitle', 'Thêm danh mục ngân sách mới')}
-      </span>
+      {/* Section Heading */}
+      <div className="flex items-center justify-between">
+        <span className="text-xs font-bold text-[var(--color-text-secondary)] uppercase tracking-wider flex items-center gap-1.5">
+          <Sparkles className="h-3.5 w-3.5 text-[var(--color-primary)]" />
+          <span>{t('plan.newBudgetCategoryTitle', 'Thêm danh mục ngân sách mới')}</span>
+        </span>
+      </div>
 
-      {/* Input row */}
+      {/* Name & Icon Input Row */}
       <div className="flex items-center gap-2 w-full max-w-full box-border">
-        {/* Selected Icon Preview */}
-        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[var(--color-bg-surface)] border border-[var(--color-border)] text-[var(--color-primary)]">
+        <div
+          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[var(--color-bg-surface)] border border-[var(--color-border)] text-[var(--color-primary)] shadow-2xs"
+          title={t('transactions.selectIcon', 'Chọn biểu tượng')}
+        >
           <CategoryIconRenderer icon={selectedIcon} size={20} />
         </div>
 
-        {/* Category Name Input */}
         <input
           type="text"
           data-testid="budget-category-name-input"
           value={newName}
-          onChange={(e) => setNewName(e.target.value)}
+          onChange={(e) => {
+            setNewName(e.target.value)
+            if (errorMsg) setErrorMsg(null)
+          }}
           placeholder={t('plan.budgetCategoryPlaceholder', 'Ví dụ: Du lịch, Giải trí, Học tập…')}
           className="min-w-0 flex-1 rounded-xl border border-[var(--color-border)] bg-[var(--color-bg-surface)] px-3 py-2 text-base sm:text-sm text-[var(--color-text-primary)] placeholder-[var(--color-text-muted)] focus:outline-none focus:border-[var(--color-border-focused)] box-border"
         />
 
-        {/* Add Button */}
         <button
           type="submit"
           data-testid="budget-category-submit-btn"
           disabled={submitting || !newName.trim()}
-          className="shrink-0 flex h-10 items-center justify-center gap-1 rounded-xl px-3 text-xs font-bold text-white bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] disabled:opacity-40 cursor-pointer transition-all active:scale-95"
+          className="shrink-0 flex h-10 items-center justify-center gap-1 rounded-xl px-3.5 text-xs font-bold text-white bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] disabled:opacity-40 cursor-pointer transition-all active:scale-95 shadow-2xs"
         >
           <Plus className="h-4 w-4" />
           <span>{t('transactions.addCategoryBtn', 'Thêm')}</span>
         </button>
       </div>
 
-      {/* Group Tabs */}
-      <div className="flex items-center gap-1 overflow-x-auto no-scrollbar pt-1 w-full max-w-full box-border">
-        {CATEGORY_ICON_GROUPS.map((g) => (
-          <button
-            key={g.groupId}
-            type="button"
-            onClick={() => setSelectedGroup(g.groupId)}
-            className={`px-2.5 py-1 rounded-lg text-[11px] font-bold shrink-0 transition-colors cursor-pointer ${
-              selectedGroup === g.groupId
-                ? 'bg-[var(--color-primary)] text-white'
-                : 'bg-[var(--color-bg-surface)] text-[var(--color-text-secondary)] border border-[var(--color-border)] hover:bg-[var(--color-border)]'
-            }`}
-          >
-            {t(g.groupNameKey, g.defaultGroupName)}
-          </button>
-        ))}
-      </div>
+      {/* Compact Icon Selector */}
+      <div className="space-y-1.5">
+        <div className="flex items-center gap-1 overflow-x-auto no-scrollbar w-full max-w-full box-border">
+          {CATEGORY_ICON_GROUPS.map((g) => (
+            <button
+              key={g.groupId}
+              type="button"
+              onClick={() => setSelectedGroup(g.groupId)}
+              className={`px-2.5 py-1 rounded-lg text-[11px] font-bold shrink-0 transition-colors cursor-pointer ${
+                selectedGroup === g.groupId
+                  ? 'bg-[var(--color-primary)] text-white shadow-2xs'
+                  : 'bg-[var(--color-bg-surface)] text-[var(--color-text-secondary)] border border-[var(--color-border)] hover:bg-[var(--color-border)]'
+              }`}
+            >
+              {t(g.groupNameKey, g.defaultGroupName)}
+            </button>
+          ))}
+        </div>
 
-      {/* Standard Icon Grid */}
-      <div className="h-24 overflow-y-auto overflow-x-hidden rounded-xl border border-[var(--color-border)] bg-[var(--color-bg-surface)] p-2 w-full max-w-full box-border">
-        <div className="grid grid-cols-6 gap-1.5 w-full">
-          {currentGroupIcons.map((item) => {
-            const isSelected = selectedIcon === item.lucideName || selectedIcon === item.id
-            return (
-              <button
-                key={item.id}
-                type="button"
-                onClick={() => setSelectedIcon(item.lucideName)}
-                title={t(item.nameKey, item.defaultName)}
-                className={`h-9 w-full rounded-lg flex items-center justify-center transition-transform active:scale-90 cursor-pointer ${
-                  isSelected
-                    ? 'bg-[var(--color-primary-soft)] text-[var(--color-primary)] border-2 border-[var(--color-primary)] font-bold'
-                    : 'bg-[var(--color-bg-subtle)] text-[var(--color-text-secondary)] border border-[var(--color-border)] hover:bg-[var(--color-border)]'
-                }`}
-              >
-                <item.iconComponent size={18} />
-              </button>
-            )
-          })}
+        <div className="h-20 overflow-y-auto overflow-x-hidden rounded-xl border border-[var(--color-border)] bg-[var(--color-bg-surface)] p-1.5 w-full max-w-full box-border">
+          <div className="grid grid-cols-6 sm:grid-cols-8 gap-1.5 w-full">
+            {currentGroupIcons.map((item) => {
+              const isSelected = selectedIcon === item.lucideName || selectedIcon === item.id
+              return (
+                <button
+                  key={item.id}
+                  type="button"
+                  onClick={() => setSelectedIcon(item.lucideName)}
+                  title={t(item.nameKey, item.defaultName)}
+                  className={`h-8 w-full rounded-lg flex items-center justify-center transition-transform active:scale-90 cursor-pointer ${
+                    isSelected
+                      ? 'bg-[var(--color-primary-soft)] text-[var(--color-primary)] border-2 border-[var(--color-primary)] font-bold'
+                      : 'bg-[var(--color-bg-subtle)] text-[var(--color-text-secondary)] border border-[var(--color-border)] hover:bg-[var(--color-border)]'
+                  }`}
+                >
+                  <item.iconComponent size={16} />
+                </button>
+              )
+            })}
+          </div>
         </div>
       </div>
 
-      {/* Checkbox: Là hóa đơn/chi phí lớn */}
-      <label className="flex items-start gap-2.5 p-2.5 rounded-xl bg-[var(--color-bg-surface)] border border-[var(--color-border)] cursor-pointer select-none hover:border-[var(--color-primary)]/50 transition-colors">
-        <input
-          type="checkbox"
-          data-testid="budget-fixed-bill-checkbox"
-          checked={isFixedBill}
-          onChange={(e) => setIsFixedBill(e.target.checked)}
-          className="mt-0.5 h-4 w-4 rounded border-[var(--color-border)] text-[var(--color-primary)] focus:ring-[var(--color-primary)] cursor-pointer accent-[var(--color-primary)] shrink-0"
-        />
-        <div className="min-w-0 flex-1">
-          <span className="text-xs font-bold text-[var(--color-text-primary)] block">
-            {t('transactions.isFixedBillLabel', 'Là hóa đơn / chi phí lớn')}
-          </span>
-          <span className="text-[11px] text-[var(--color-text-muted)] block leading-tight">
-            {t('transactions.isFixedBillHelp', 'Không trừ vào Hạn mức ăn tiêu hằng ngày')}
-          </span>
-        </div>
-      </label>
+      {/* Category Configuration */}
+      <div className="space-y-2 pt-2 border-t border-[var(--color-border)]/60">
+        <span className="text-[11px] font-bold text-[var(--color-text-secondary)] uppercase tracking-wider flex items-center gap-1.5">
+          <SlidersHorizontal className="h-3 w-3" />
+          <span>{t('plan.categoryConfigTitle', 'Cấu hình danh mục')}</span>
+        </span>
 
-      {/* Additional Options (Tùy chọn bổ sung) */}
+        <label className="flex items-start gap-2.5 p-2.5 rounded-xl bg-[var(--color-bg-surface)] border border-[var(--color-border)] cursor-pointer select-none hover:border-[var(--color-primary)]/50 transition-colors">
+          <input
+            type="checkbox"
+            data-testid="budget-fixed-bill-checkbox"
+            checked={isFixedBill}
+            onChange={(e) => setIsFixedBill(e.target.checked)}
+            className="mt-0.5 h-4 w-4 rounded border-[var(--color-border)] text-[var(--color-primary)] focus:ring-[var(--color-primary)] cursor-pointer accent-[var(--color-primary)] shrink-0"
+          />
+          <div className="min-w-0 flex-1">
+            <span className="text-xs font-bold text-[var(--color-text-primary)] block">
+              {t('transactions.isFixedBillLabel', 'Là hóa đơn / chi phí lớn')}
+            </span>
+            <span className="text-[11px] text-[var(--color-text-muted)] block leading-tight">
+              {t('transactions.isFixedBillHelp', 'Không trừ vào Hạn mức ăn tiêu hằng ngày')}
+            </span>
+          </div>
+        </label>
+      </div>
+
+      {/* Additional Options (2-column responsive layout) */}
       <div className="space-y-2 pt-2 border-t border-[var(--color-border)]/60">
         <span className="text-[11px] font-bold text-[var(--color-text-secondary)] uppercase tracking-wider block">
           {t('transactions.additionalOptions', 'Tùy chọn bổ sung')}
         </span>
 
-        {/* Option 1: Separate from Expense Tracking */}
-        <label className="flex items-start gap-2.5 p-2.5 rounded-xl bg-[var(--color-bg-surface)] border border-[var(--color-border)] cursor-pointer select-none hover:border-[var(--color-primary)]/50 transition-colors">
-          <input
-            type="checkbox"
-            data-testid="budget-exclude-tracking-checkbox"
-            checked={excludeFromExpenseTracking}
-            onChange={(e) => setExcludeFromExpenseTracking(e.target.checked)}
-            className="mt-0.5 h-4 w-4 rounded border-[var(--color-border)] text-[var(--color-primary)] focus:ring-[var(--color-primary)] cursor-pointer accent-[var(--color-primary)] shrink-0"
-          />
-          <div className="min-w-0 flex-1">
-            <span className="text-xs font-bold text-[var(--color-text-primary)] block">
-              {t('transactions.excludeFromTracking', 'Tách khỏi theo dõi chi tiêu')}
-            </span>
-            <span className="text-[11px] text-[var(--color-text-muted)] block leading-tight">
-              {t(
-                'transactions.excludeFromTrackingHelp',
-                'Loại trừ danh mục này khỏi theo dõi chi tiêu thường xuyên, báo cáo và tính toán chi tiêu hàng ngày.'
-              )}
-            </span>
-          </div>
-        </label>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          {/* Option 1: Separate from Expense Tracking */}
+          <label className="flex items-start gap-2.5 p-2.5 rounded-xl bg-[var(--color-bg-surface)] border border-[var(--color-border)] cursor-pointer select-none hover:border-[var(--color-primary)]/50 transition-colors">
+            <input
+              type="checkbox"
+              data-testid="budget-exclude-tracking-checkbox"
+              checked={excludeFromExpenseTracking}
+              onChange={(e) => setExcludeFromExpenseTracking(e.target.checked)}
+              className="mt-0.5 h-4 w-4 rounded border-[var(--color-border)] text-[var(--color-primary)] focus:ring-[var(--color-primary)] cursor-pointer accent-[var(--color-primary)] shrink-0"
+            />
+            <div className="min-w-0 flex-1">
+              <span className="text-xs font-bold text-[var(--color-text-primary)] block">
+                {t('transactions.excludeFromTracking', 'Tách khỏi theo dõi chi tiêu')}
+              </span>
+              <span className="text-[11px] text-[var(--color-text-muted)] block leading-tight">
+                {t(
+                  'transactions.excludeFromTrackingHelp',
+                  'Loại trừ danh mục này khỏi theo dõi chi tiêu thường xuyên, báo cáo và tính toán chi tiêu hàng ngày.'
+                )}
+              </span>
+            </div>
+          </label>
 
-        {/* Option 2: Enable Itemized Records */}
-        <label className="flex items-start gap-2.5 p-2.5 rounded-xl bg-[var(--color-bg-surface)] border border-[var(--color-border)] cursor-pointer select-none hover:border-[var(--color-primary)]/50 transition-colors">
-          <input
-            type="checkbox"
-            data-testid="budget-itemized-records-checkbox"
-            checked={enableItemizedRecords}
-            onChange={(e) => setEnableItemizedRecords(e.target.checked)}
-            className="mt-0.5 h-4 w-4 rounded border-[var(--color-border)] text-[var(--color-primary)] focus:ring-[var(--color-primary)] cursor-pointer accent-[var(--color-primary)] shrink-0"
-          />
-          <div className="min-w-0 flex-1">
-            <span className="text-xs font-bold text-[var(--color-text-primary)] block">
-              {t('transactions.enableItemizedRecords', 'Bật ghi chép chi tiết')}
-            </span>
-            <span className="text-[11px] text-[var(--color-text-muted)] block leading-tight">
-              {t(
-                'transactions.enableItemizedRecordsHelp',
-                'Cho phép thêm, sửa, xóa các khoản ghi chép riêng lẻ với tên, số tiền, ngày và ghi chú tùy chọn.'
-              )}
-            </span>
-          </div>
-        </label>
+          {/* Option 2: Enable Itemized Records */}
+          <label className="flex items-start gap-2.5 p-2.5 rounded-xl bg-[var(--color-bg-surface)] border border-[var(--color-border)] cursor-pointer select-none hover:border-[var(--color-primary)]/50 transition-colors">
+            <input
+              type="checkbox"
+              data-testid="budget-itemized-records-checkbox"
+              checked={enableItemizedRecords}
+              onChange={(e) => setEnableItemizedRecords(e.target.checked)}
+              className="mt-0.5 h-4 w-4 rounded border-[var(--color-border)] text-[var(--color-primary)] focus:ring-[var(--color-primary)] cursor-pointer accent-[var(--color-primary)] shrink-0"
+            />
+            <div className="min-w-0 flex-1">
+              <span className="text-xs font-bold text-[var(--color-text-primary)] block">
+                {t('transactions.enableItemizedRecords', 'Bật ghi chép chi tiết')}
+              </span>
+              <span className="text-[11px] text-[var(--color-text-muted)] block leading-tight">
+                {t(
+                  'transactions.enableItemizedRecordsHelp',
+                  'Cho phép thêm, sửa, xóa các khoản ghi chép riêng lẻ với tên, số tiền, ngày và ghi chú tùy chọn.'
+                )}
+              </span>
+            </div>
+          </label>
+        </div>
       </div>
 
       {errorMsg && (

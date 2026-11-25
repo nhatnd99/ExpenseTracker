@@ -144,7 +144,12 @@
     "scopeHelp": "When saved as default, all upcoming months will automatically inherit this budget plan.",
     "budgetCategoryManagerTitle": "Manage Budget Categories",
     "newBudgetCategoryTitle": "New budget category",
-    "budgetCategoryPlaceholder": "e.g. Travel, Entertainment, Education…"
+    "budgetCategoryPlaceholder": "e.g. Travel, Entertainment, Education…",
+    "categoryConfigTitle": "Category Configuration",
+    "systemCategoriesTitle": "System Categories",
+    "systemBadge": "System",
+    "customCategoriesTitle": "Custom Categories",
+    "customCategoriesEmpty": "No custom categories yet. Create one above."
   },
   "transactions": {
     "title": "Daily Expenses",

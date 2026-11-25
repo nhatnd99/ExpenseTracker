@@ -32,7 +32,7 @@ import {
   saveMonthlyPlan,
   type PlanWithDetails,
 } from '@/features/monthly-plans/monthlyPlanService'
-import { budgetCategoryRepository } from '@/repositories/budgetCategoryRepository'
+import { budgetCategoryRepository, isBaseBudgetCategory } from '@/repositories/budgetCategoryRepository'
 import { expenseCategoryRepository } from '@/repositories/expenseCategoryRepository'
 import { CategoryIconRenderer } from '@/components/ui/CategoryIconRenderer'
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner'
@@ -241,18 +241,23 @@ export function SettingsPage() {
           const savingsAlloc = data.allocations.find((a) => a.categoryId === 'cat-savings')
           const fixedAlloc = data.allocations.find((a) => a.categoryId === 'cat-fixed')
 
-          const customAllocs = data.allocations.filter(
-            (a) => a.categoryId !== 'cat-expenses' && a.categoryId !== 'cat-fixed' && a.categoryId !== 'cat-savings',
-          )
-          const loadedCustoms = customAllocs.map((a) => {
-            const cat = data.categories.find((c) => c.id === a.categoryId)
-            return {
-              id: a.categoryId,
-              name: cat?.name ?? t('transactions.categories', 'Danh mục'),
-              icon: cat?.icon ?? '🏷️',
-              percent: a.allocationPercent,
-            }
-          })
+          const customAllocs = data.allocations.filter((a) => !isBaseBudgetCategory(a.categoryId))
+          const categoryOrderMap = new Map(data.categories.map((c) => [c.id, c.sortOrder]))
+          const loadedCustoms = customAllocs
+            .map((a) => {
+              const cat = data.categories.find((c) => c.id === a.categoryId)
+              return {
+                id: a.categoryId,
+                name: cat?.name ?? t('transactions.categories', 'Danh mục'),
+                icon: cat?.icon ?? '🏷️',
+                percent: a.allocationPercent,
+              }
+            })
+            .sort((a, b) => {
+              const orderA = categoryOrderMap.get(a.id) ?? Number.MAX_SAFE_INTEGER
+              const orderB = categoryOrderMap.get(b.id) ?? Number.MAX_SAFE_INTEGER
+              return orderA - orderB
+            })
 
           const dailyP = dailyAlloc ? dailyAlloc.allocationPercent : 50
           const savingsP = savingsAlloc ? savingsAlloc.allocationPercent : 20
@@ -372,18 +377,13 @@ export function SettingsPage() {
         // ignore
       }
 
-      // 2. Ensure core budget category sort orders exist without overwriting user-edited names
-      await budgetCategoryRepository.update('cat-expenses', { sortOrder: 1 }).catch(() => { })
-      await budgetCategoryRepository.update('cat-fixed', { sortOrder: 2 }).catch(() => { })
-      await budgetCategoryRepository.update('cat-savings', { sortOrder: 3 }).catch(() => { })
-
+      // 2. Sync custom budget category names without mutating Display Order (sortOrder)
       for (let i = 0; i < customItems.length; i++) {
         const item = customItems[i]
         const existingCat = await budgetCategoryRepository.findById(item.id)
         if (existingCat) {
           await budgetCategoryRepository.update(item.id, {
             name: item.name.trim() || t('transactions.categories', 'Danh mục'),
-            sortOrder: i + 4,
           })
         } else {
           await budgetCategoryRepository.create({
@@ -612,64 +612,7 @@ export function SettingsPage() {
                   </div>
 
                   {/* ===================================================
-                      INDEPENDENT ITEMIZED CATEGORIES (Excluded from tracking)
-                      Configurable custom categories with itemized records & excluded tracking
-                      =================================================== */}
-                  {allCategories
-                    .filter((c) => c.enableItemizedRecords && c.excludeFromExpenseTracking)
-                    .map((cat) => {
-                      const catRecords = allRecords.filter(
-                        (r) => r.categoryId === cat.id && r.date.startsWith(currentCycleMonth)
-                      )
-                      const catTotal = catRecords.reduce((sum, r) => sum + r.amount, 0)
-                      return (
-                        <div
-                          key={cat.id}
-                          role="button"
-                          tabIndex={0}
-                          onClick={() => setSelectedRecordCategory(cat)}
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter' || e.key === ' ') {
-                              setSelectedRecordCategory(cat)
-                            }
-                          }}
-                          className="rounded-2xl border-2 border-purple-500/30 bg-[var(--color-bg-surface)] p-3.5 space-y-2.5 box-border cursor-pointer hover:border-purple-500 transition-all active:scale-[0.99] shadow-2xs group"
-                        >
-                          <div className="flex items-center justify-between gap-2.5 sm:gap-3 w-full">
-                            <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 flex-1">
-                              <span className="flex h-7 w-7 items-center justify-center rounded-xl bg-purple-500/15 text-sm shadow-2xs shrink-0 text-purple-600 dark:text-purple-400">
-                                <CategoryIconRenderer icon={cat.icon || 'Layers'} size={16} />
-                              </span>
-                              <div className="flex items-center gap-1.5 min-w-0 flex-1 flex-wrap">
-                                <span className="font-bold text-xs text-[var(--color-text-primary)] whitespace-normal break-words group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors">
-                                  {cat.name}
-                                </span>
-                                <span className="text-[10px] font-semibold text-purple-600 dark:text-purple-400 bg-purple-500/15 px-1.5 py-0.5 rounded-md shrink-0 border border-purple-500/20 inline-flex items-center gap-0.5">
-                                  <span>{catRecords.length} {t('records.itemsUnit', 'khoản')}</span>
-                                </span>
-                              </div>
-                            </div>
-
-                            <span className="text-[11px] font-bold text-purple-600 dark:text-purple-400 bg-purple-500/10 px-2 py-1 rounded-xl border border-purple-500/20 shrink-0">
-                              {t('transactions.excludedBadge', 'Tách riêng')}
-                            </span>
-                          </div>
-
-                          <div className="flex items-center justify-between pt-2 border-t border-[var(--color-border)]/60 text-xs">
-                            <span className="text-[11px] text-purple-600 dark:text-purple-400 group-hover:underline flex items-center gap-1">
-                              <span>{t('records.clickToManage', 'Chạm để sửa chi tiết các khoản')}</span>
-                              <span>→</span>
-                            </span>
-                            <span className="font-bold text-xs text-[var(--color-text-primary)] amount-display">
-                              {formatVnd(catTotal)}
-                            </span>
-                          </div>
-                        </div>
-                      )
-                    })}
-
-                  {/* ===================================================
-                      CATEGORY 3: Savings (Mandatory Default)
+                      CATEGORY 3: Savings (Mandatory Default - Fixed Pos 3)
                       =================================================== */}
                   <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg-subtle)] p-3.5 space-y-2.5 box-border">
                     <div className="flex items-center justify-between gap-2.5 sm:gap-3 w-full">
@@ -703,69 +646,148 @@ export function SettingsPage() {
                   </div>
 
                   {/* ===================================================
-                      CATEGORY 4+: Custom Categories (Addable & Deletable)
+                      CATEGORY 4+: Custom Categories (Sorted strictly by Display Order)
                       =================================================== */}
-                  {customItems.map((item) => {
-                    const itemAllocated = Math.round((income * item.percent) / 100)
-                    const catDef = allCategories.find((c) => c.id === item.id)
-                    return (
-                      <div
-                        key={item.id}
-                        className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg-subtle)] p-3.5 space-y-2.5 box-border transition-colors hover:border-[var(--color-border-focused)]/50"
-                      >
-                        <div className="flex items-center justify-between gap-2.5 sm:gap-3 w-full">
-                          <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 flex-1">
-                            <span className="flex h-7 w-7 items-center justify-center rounded-xl bg-[var(--color-bg-surface)] text-sm shadow-2xs shrink-0 text-[var(--color-primary)]">
-                              <CategoryIconRenderer icon={item.icon} size={16} />
-                            </span>
-                            <div className="flex items-center gap-2 min-w-0 flex-1">
-                              <input
-                                type="text"
-                                value={item.name}
-                                onChange={(e) => updateCustomItemName(item.id, e.target.value)}
-                                className="font-bold text-xs text-[var(--color-text-primary)] bg-transparent border-b border-transparent focus:border-[var(--color-border-focused)] focus:outline-none min-w-0 flex-1 truncate"
-                                placeholder={t('plan.categoryNamePlaceholder', 'Tên danh mục')}
-                              />
-                              <button
-                                type="button"
-                                onClick={() => removeCustomItem(item.id)}
-                                className="p-1 text-[var(--color-text-muted)] hover:text-[var(--color-expense)] cursor-pointer rounded-lg hover:bg-[var(--color-expense-soft)] transition-colors shrink-0"
-                                title={t('plan.deleteCategory', 'Xóa danh mục')}
-                              >
-                                <Trash2 className="h-3.5 w-3.5" />
-                              </button>
+                  {(() => {
+                    const customCatsSorted = [...allCategories]
+                      .filter((c) => !isBaseBudgetCategory(c.id))
+                      .sort((a, b) => a.sortOrder - b.sortOrder)
+                    const customItemsMap = new Map(customItems.map((ci) => [ci.id, ci]))
+                    const renderedIds = new Set<string>()
+                    const orderedNodes: React.ReactNode[] = []
+
+                    const renderAllocatedItem = (item: (typeof customItems)[number], catDef?: BudgetCategory) => {
+                      const itemAllocated = Math.round((income * item.percent) / 100)
+                      return (
+                        <div
+                          key={item.id}
+                          data-testid={`budget-plan-custom-item-${item.id}`}
+                          className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg-subtle)] p-3.5 space-y-2.5 box-border transition-colors hover:border-[var(--color-border-focused)]/50"
+                        >
+                          <div className="flex items-center justify-between gap-2.5 sm:gap-3 w-full">
+                            <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 flex-1">
+                              <span className="flex h-7 w-7 items-center justify-center rounded-xl bg-[var(--color-bg-surface)] text-sm shadow-2xs shrink-0 text-[var(--color-primary)]">
+                                <CategoryIconRenderer icon={item.icon} size={16} />
+                              </span>
+                              <div className="flex items-center gap-2 min-w-0 flex-1">
+                                <input
+                                  type="text"
+                                  value={item.name}
+                                  onChange={(e) => updateCustomItemName(item.id, e.target.value)}
+                                  className="font-bold text-xs text-[var(--color-text-primary)] bg-transparent border-b border-transparent focus:border-[var(--color-border-focused)] focus:outline-none min-w-0 flex-1 truncate"
+                                  placeholder={t('plan.categoryNamePlaceholder', 'Tên danh mục')}
+                                />
+                                <button
+                                  type="button"
+                                  onClick={() => removeCustomItem(item.id)}
+                                  className="p-1 text-[var(--color-text-muted)] hover:text-[var(--color-expense)] cursor-pointer rounded-lg hover:bg-[var(--color-expense-soft)] transition-colors shrink-0"
+                                  title={t('plan.deleteCategory', 'Xóa danh mục')}
+                                >
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                </button>
+                              </div>
                             </div>
+
+                            <PercentageInput
+                              value={item.percent}
+                              onChange={(val) => setCustomItemPercent(item.id, val)}
+                              ariaLabel={`${item.name} percent`}
+                            />
                           </div>
 
-                          <PercentageInput
-                            value={item.percent}
-                            onChange={(val) => setCustomItemPercent(item.id, val)}
-                            ariaLabel={`${item.name} percent`}
-                          />
-                        </div>
-
-                        <div className="flex items-center justify-between pt-2 border-t border-[var(--color-border)]/60 text-xs">
-                          {catDef?.enableItemizedRecords ? (
-                            <button
-                              type="button"
-                              onClick={() => setSelectedRecordCategory(catDef)}
-                              className="text-[11px] text-[var(--color-primary)] hover:underline flex items-center gap-1 cursor-pointer"
-                            >
-                              <span>{t('records.clickToManage', 'Chạm để sửa chi tiết các khoản')}</span>
-                              <span>→</span>
-                            </button>
-                          ) : (
-                            <span className="text-[11px] text-[var(--color-text-muted)]">
-                              {t('plan.allocatedAmount', 'Số tiền phân bổ')}:
+                          <div className="flex items-center justify-between pt-2 border-t border-[var(--color-border)]/60 text-xs">
+                            {catDef?.enableItemizedRecords ? (
+                              <button
+                                type="button"
+                                onClick={() => setSelectedRecordCategory(catDef)}
+                                className="text-[11px] text-[var(--color-primary)] hover:underline flex items-center gap-1 cursor-pointer"
+                              >
+                                <span>{t('records.clickToManage', 'Chạm để sửa chi tiết các khoản')}</span>
+                                <span>→</span>
+                              </button>
+                            ) : (
+                              <span className="text-[11px] text-[var(--color-text-muted)]">
+                                {t('plan.allocatedAmount', 'Số tiền phân bổ')}:
+                              </span>
+                            )}
+                            <span className="font-bold text-xs text-[var(--color-text-primary)] amount-display">
+                              {formatVnd(itemAllocated)}
                             </span>
-                          )}
-                          <span className="font-bold text-xs text-[var(--color-text-primary)] amount-display">
-                            {formatVnd(itemAllocated)}
-                          </span>
+                          </div>
                         </div>
-                      </div>
-                    )
-                  })}
+                      )
+                    }
+
+                    for (const cat of customCatsSorted) {
+                      if (cat.enableItemizedRecords && cat.excludeFromExpenseTracking) {
+                        renderedIds.add(cat.id)
+                        const catRecords = allRecords.filter(
+                          (r) => r.categoryId === cat.id && r.date.startsWith(currentCycleMonth),
+                        )
+                        const catTotal = catRecords.reduce((sum, r) => sum + r.amount, 0)
+                        orderedNodes.push(
+                          <div
+                            key={cat.id}
+                            data-testid={`budget-plan-custom-item-${cat.id}`}
+                            role="button"
+                            tabIndex={0}
+                            onClick={() => setSelectedRecordCategory(cat)}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter' || e.key === ' ') {
+                                setSelectedRecordCategory(cat)
+                              }
+                            }}
+                            className="rounded-2xl border-2 border-purple-500/30 bg-[var(--color-bg-surface)] p-3.5 space-y-2.5 box-border cursor-pointer hover:border-purple-500 transition-all active:scale-[0.99] shadow-2xs group"
+                          >
+                            <div className="flex items-center justify-between gap-2.5 sm:gap-3 w-full">
+                              <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 flex-1">
+                                <span className="flex h-7 w-7 items-center justify-center rounded-xl bg-purple-500/15 text-sm shadow-2xs shrink-0 text-purple-600 dark:text-purple-400">
+                                  <CategoryIconRenderer icon={cat.icon || 'Layers'} size={16} />
+                                </span>
+                                <div className="flex items-center gap-1.5 min-w-0 flex-1 flex-wrap">
+                                  <span className="font-bold text-xs text-[var(--color-text-primary)] whitespace-normal break-words group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors">
+                                    {cat.name}
+                                  </span>
+                                  <span className="text-[10px] font-semibold text-purple-600 dark:text-purple-400 bg-purple-500/15 px-1.5 py-0.5 rounded-md shrink-0 border border-purple-500/20 inline-flex items-center gap-0.5">
+                                    <span>{catRecords.length} {t('records.itemsUnit', 'khoản')}</span>
+                                  </span>
+                                </div>
+                              </div>
+
+                              <span className="text-[11px] font-bold text-purple-600 dark:text-purple-400 bg-purple-500/10 px-2 py-1 rounded-xl border border-purple-500/20 shrink-0">
+                                {t('transactions.excludedBadge', 'Tách riêng')}
+                              </span>
+                            </div>
+
+                            <div className="flex items-center justify-between pt-2 border-t border-[var(--color-border)]/60 text-xs">
+                              <span className="text-[11px] text-purple-600 dark:text-purple-400 group-hover:underline flex items-center gap-1">
+                                <span>{t('records.clickToManage', 'Chạm để sửa chi tiết các khoản')}</span>
+                                <span>→</span>
+                              </span>
+                              <span className="font-bold text-xs text-[var(--color-text-primary)] amount-display">
+                                {formatVnd(catTotal)}
+                              </span>
+                            </div>
+                          </div>,
+                        )
+                        continue
+                      }
+
+                      const matchedItem = customItemsMap.get(cat.id)
+                      if (matchedItem) {
+                        renderedIds.add(cat.id)
+                        orderedNodes.push(renderAllocatedItem(matchedItem, cat))
+                      }
+                    }
+
+                    for (const item of customItems) {
+                      if (!renderedIds.has(item.id)) {
+                        orderedNodes.push(renderAllocatedItem(item))
+                      }
+                    }
+
+                    return orderedNodes
+                  })()}
 
                   {/* Category Actions Row */}
                   <div className="flex items-center gap-2 pt-1">

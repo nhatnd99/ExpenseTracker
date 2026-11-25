@@ -17,7 +17,7 @@ describe('BudgetCategoryModal - Dedicated Monthly Budget Plan Category Managemen
 
   const categories: BudgetCategory[] = [
     {
-      id: 'cat-1',
+      id: 'cat-expenses',
       name: 'Daily Expenses',
       icon: '🛒',
       type: 'expense',
@@ -27,14 +27,44 @@ describe('BudgetCategoryModal - Dedicated Monthly Budget Plan Category Managemen
       updatedAt: '2026-01-01',
     },
     {
-      id: 'cat-2',
+      id: 'cat-fixed',
+      name: 'Fixed Bills',
+      icon: '🏠',
+      type: 'expense',
+      isFixedBill: true,
+      sortOrder: 2,
+      createdAt: '2026-01-01',
+      updatedAt: '2026-01-01',
+    },
+    {
+      id: 'cat-savings',
+      name: 'Savings',
+      icon: '🏦',
+      type: 'expense',
+      isFixedBill: false,
+      sortOrder: 3,
+      createdAt: '2026-01-01',
+      updatedAt: '2026-01-01',
+    },
+    {
+      id: 'cat-custom-1',
       name: 'Vacation',
       icon: 'Palmtree',
       type: 'expense',
       isFixedBill: true,
       excludeFromExpenseTracking: true,
       enableItemizedRecords: true,
-      sortOrder: 2,
+      sortOrder: 4,
+      createdAt: '2026-01-01',
+      updatedAt: '2026-01-01',
+    },
+    {
+      id: 'cat-custom-2',
+      name: 'Education',
+      icon: 'GraduationCap',
+      type: 'expense',
+      isFixedBill: false,
+      sortOrder: 5,
       createdAt: '2026-01-01',
       updatedAt: '2026-01-01',
     },
@@ -47,7 +77,7 @@ describe('BudgetCategoryModal - Dedicated Monthly Budget Plan Category Managemen
     vi.spyOn(window, 'confirm').mockImplementation(() => true)
   })
 
-  it('does not render Expense/Income transaction tabs and preserves Name, Icon, and ALL Additional Options', () => {
+  it('locks System Base Categories at 1-3, exposes Custom ordering at 4+, and preserves Name, Icon, and Additional Options', () => {
     render(
       <BudgetCategoryModal
         isOpen={true}
@@ -61,13 +91,58 @@ describe('BudgetCategoryModal - Dedicated Monthly Budget Plan Category Managemen
     // Should NOT show Income category tab
     expect(screen.queryByRole('button', { name: /Income/i })).toBeNull()
 
-    // Should show Name input, Fixed Bill checkbox, both Additional Options, AND Display Order controls
+    // Should show Name input, Fixed Bill checkbox, both Additional Options, AND Display Order sections
     expect(screen.getByTestId('budget-category-name-input')).toBeDefined()
     expect(screen.getByTestId('budget-fixed-bill-checkbox')).toBeDefined()
     expect(screen.getByTestId('budget-exclude-tracking-checkbox')).toBeDefined()
     expect(screen.getByTestId('budget-itemized-records-checkbox')).toBeDefined()
-    expect(screen.getByText(/Display Order|Thứ tự hiển thị/i)).toBeDefined()
-    expect(screen.getAllByRole('button', { name: /Move up|Di chuyển lên/i }).length).toBeGreaterThan(0)
+    expect(screen.getByTestId('system-budget-categories-list')).toBeDefined()
+    expect(screen.getByTestId('custom-budget-categories-list')).toBeDefined()
+    expect(screen.getByTestId('category-position-cat-expenses').textContent).toBe('1')
+    expect(screen.getByTestId('category-position-cat-fixed').textContent).toBe('2')
+    expect(screen.getByTestId('category-position-cat-savings').textContent).toBe('3')
+    expect(screen.getByTestId('category-position-cat-custom-1').textContent).toBe('4')
+    expect(screen.getByTestId('category-position-cat-custom-2').textContent).toBe('5')
+
+    // Base categories must NOT have edit, delete, or move buttons
+    expect(screen.queryByTestId('budget-category-edit-cat-expenses')).toBeNull()
+    expect(screen.queryByTestId('budget-category-delete-cat-fixed')).toBeNull()
+    expect(screen.queryByTestId('budget-category-move-up-cat-savings')).toBeNull()
+
+    // Custom categories start at 4 and can only move within positions 4+
+    const firstMoveUp = screen.getByTestId('budget-category-move-up-cat-custom-1') as HTMLButtonElement
+    const lastMoveDown = screen.getByTestId('budget-category-move-down-cat-custom-2') as HTMLButtonElement
+    expect(firstMoveUp.disabled).toBe(true)
+    expect(lastMoveDown.disabled).toBe(true)
+    expect((screen.getByTestId('budget-category-move-up-cat-custom-2') as HTMLButtonElement).disabled).toBe(false)
+  })
+
+  it('reorders custom categories within positions 4+ without affecting System Categories 1-3', async () => {
+    localStorage.setItem(BUDGET_CATEGORIES_STORAGE_KEY, JSON.stringify(categories))
+
+    render(
+      <BudgetCategoryModal
+        isOpen={true}
+        onClose={mockOnClose}
+        categories={categories}
+        onCategoriesChanged={mockOnCategoriesChanged}
+      />,
+    )
+
+    fireEvent.click(screen.getByTestId('budget-category-move-up-cat-custom-2'))
+
+    await waitFor(async () => {
+      const stored = await budgetCategoryRepository.findAll()
+      expect(stored.map((c) => ({ id: c.id, sortOrder: c.sortOrder }))).toEqual([
+        { id: 'cat-expenses', sortOrder: 1 },
+        { id: 'cat-fixed', sortOrder: 2 },
+        { id: 'cat-savings', sortOrder: 3 },
+        { id: 'cat-custom-2', sortOrder: 4 },
+        { id: 'cat-custom-1', sortOrder: 5 },
+      ])
+    })
+
+    expect(mockOnCategoriesChanged).toHaveBeenCalledWith({ type: 'reordered' })
   })
 
   it('creates a Budget Category with Additional Options and notifies parent with created category', async () => {
@@ -117,7 +192,7 @@ describe('BudgetCategoryModal - Dedicated Monthly Budget Plan Category Managemen
       />,
     )
 
-    expect(screen.getByTestId('budget-category-manage-records-cat-2')).toBeDefined()
+    expect(screen.getByTestId('budget-category-manage-records-cat-custom-1')).toBeDefined()
   })
 
   it('edits Budget Category preserving saved Additional Options and warns before changing tracking behavior when records exist', async () => {
@@ -125,7 +200,7 @@ describe('BudgetCategoryModal - Dedicated Monthly Budget Plan Category Managemen
 
     await categoryRecordRepository.create({
       id: 'rec-1',
-      categoryId: 'cat-2',
+      categoryId: 'cat-custom-1',
       name: 'Flight ticket',
       amount: 1200000,
       date: '2026-11-10',
@@ -144,7 +219,7 @@ describe('BudgetCategoryModal - Dedicated Monthly Budget Plan Category Managemen
       />,
     )
 
-    fireEvent.click(screen.getByTestId('budget-category-edit-cat-2'))
+    fireEvent.click(screen.getByTestId('budget-category-edit-cat-custom-1'))
 
     // Verify saved options are preserved in edit form
     expect(
@@ -169,9 +244,10 @@ describe('BudgetCategoryModal - Dedicated Monthly Budget Plan Category Managemen
         expect.objectContaining({
           type: 'updated',
           category: expect.objectContaining({
-            id: 'cat-2',
+            id: 'cat-custom-1',
             name: 'Holiday Trips',
             excludeFromExpenseTracking: false,
+            sortOrder: 4,
           }),
         }),
       )
@@ -190,16 +266,17 @@ describe('BudgetCategoryModal - Dedicated Monthly Budget Plan Category Managemen
       />,
     )
 
-    fireEvent.click(screen.getByTestId('budget-category-delete-cat-2'))
+    fireEvent.click(screen.getByTestId('budget-category-delete-cat-custom-1'))
 
     await waitFor(async () => {
       const remaining = await budgetCategoryRepository.findAll()
-      expect(remaining.some((c) => c.id === 'cat-2')).toBe(false)
+      expect(remaining.some((c) => c.id === 'cat-custom-1')).toBe(false)
+      expect(remaining.find((c) => c.id === 'cat-custom-2')?.sortOrder).toBe(4)
     })
 
     expect(mockOnCategoriesChanged).toHaveBeenCalledWith({
       type: 'deleted',
-      categoryId: 'cat-2',
+      categoryId: 'cat-custom-1',
     })
   })
 

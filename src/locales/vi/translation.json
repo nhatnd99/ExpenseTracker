@@ -145,7 +145,12 @@
     "scopeHelp": "Khi lưu làm mặc định, mọi tháng mới sẽ tự động kế thừa kế hoạch này.",
     "budgetCategoryManagerTitle": "Quản Lý Danh Mục Ngân Sách",
     "newBudgetCategoryTitle": "Thêm danh mục ngân sách mới",
-    "budgetCategoryPlaceholder": "Ví dụ: Du lịch, Giải trí, Học tập…"
+    "budgetCategoryPlaceholder": "Ví dụ: Du lịch, Giải trí, Học tập…",
+    "categoryConfigTitle": "Cấu Hình Danh Mục",
+    "systemCategoriesTitle": "Danh Mục Hệ Thống",
+    "systemBadge": "Hệ thống",
+    "customCategoriesTitle": "Danh Mục Tùy Chỉnh",
+    "customCategoriesEmpty": "Chưa có danh mục tùy chỉnh nào. Hãy thêm danh mục mới ở trên."
   },
   "transactions": {
     "title": "Ghi Chép Chi Tiêu",

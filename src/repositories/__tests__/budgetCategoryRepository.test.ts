@@ -130,14 +130,88 @@ describe('budgetCategoryRepository - Independence & Backward-Compatible Migratio
     expect(expCats.find((c) => c.id === 'cat-expenses')?.name).toBe('Daily Expenses')
   })
 
-  it('does not recreate deleted default categories if BUDGET_CATEGORIES_STORAGE_KEY already exists', async () => {
-    await budgetCategoryRepository.delete('cat-emergency')
-    const afterDelete = await budgetCategoryRepository.findAll()
-    expect(afterDelete.some((c) => c.id === 'cat-emergency')).toBe(false)
+  it('locks Base Categories at positions 1, 2, 3 and prevents deleting or reordering them', async () => {
+    const initial = await budgetCategoryRepository.findAll()
+    expect(initial.map((c) => ({ id: c.id, sortOrder: c.sortOrder }))).toEqual([
+      { id: 'cat-expenses', sortOrder: 1 },
+      { id: 'cat-fixed', sortOrder: 2 },
+      { id: 'cat-savings', sortOrder: 3 },
+    ])
 
-    // Subsequent reads do not restore deleted category
-    const reRead = await budgetCategoryRepository.findAll()
-    expect(reRead.some((c) => c.id === 'cat-emergency')).toBe(false)
+    await expect(budgetCategoryRepository.delete('cat-expenses')).rejects.toThrow()
+    await expect(budgetCategoryRepository.delete('cat-fixed')).rejects.toThrow()
+    await expect(budgetCategoryRepository.delete('cat-savings')).rejects.toThrow()
+
+    const afterDeleteAttempt = await budgetCategoryRepository.findAll()
+    expect(afterDeleteAttempt.map((c) => ({ id: c.id, sortOrder: c.sortOrder }))).toEqual([
+      { id: 'cat-expenses', sortOrder: 1 },
+      { id: 'cat-fixed', sortOrder: 2 },
+      { id: 'cat-savings', sortOrder: 3 },
+    ])
+  })
+
+  it('auto-assigns sequential positions 4+ for custom categories, preserves relative order on reorder/edit, and normalizes after deletion', async () => {
+    await budgetCategoryRepository.create({
+      id: 'cat-custom-1',
+      name: 'Travel',
+      sortOrder: 99,
+      createdAt: '',
+      updatedAt: '',
+    })
+    await budgetCategoryRepository.create({
+      id: 'cat-custom-2',
+      name: 'Fitness',
+      sortOrder: 99,
+      createdAt: '',
+      updatedAt: '',
+    })
+    await budgetCategoryRepository.create({
+      id: 'cat-custom-3',
+      name: 'Education',
+      sortOrder: 99,
+      createdAt: '',
+      updatedAt: '',
+    })
+
+    const created = await budgetCategoryRepository.findAll()
+    expect(created.filter((c) => c.id.startsWith('cat-custom-')).map((c) => c.sortOrder)).toEqual([4, 5, 6])
+
+    const byId = new Map(created.map((c) => [c.id, c]))
+    // Attempt to reorder with base category shuffled — base stays 1,2,3 and customs reorder 4,5,6
+    await budgetCategoryRepository.reorder([
+      byId.get('cat-savings')!,
+      byId.get('cat-custom-3')!,
+      byId.get('cat-custom-1')!,
+      byId.get('cat-expenses')!,
+      byId.get('cat-fixed')!,
+      byId.get('cat-custom-2')!,
+    ])
+    const afterReorder = await budgetCategoryRepository.findAll()
+    expect(afterReorder.map((c) => ({ id: c.id, sortOrder: c.sortOrder }))).toEqual([
+      { id: 'cat-expenses', sortOrder: 1 },
+      { id: 'cat-fixed', sortOrder: 2 },
+      { id: 'cat-savings', sortOrder: 3 },
+      { id: 'cat-custom-3', sortOrder: 4 },
+      { id: 'cat-custom-1', sortOrder: 5 },
+      { id: 'cat-custom-2', sortOrder: 6 },
+    ])
+
+    // Editing a custom category preserves its sortOrder
+    await budgetCategoryRepository.update('cat-custom-1', { name: 'World Travel', sortOrder: 1 })
+    const afterEdit = await budgetCategoryRepository.findAll()
+    expect(afterEdit.find((c) => c.id === 'cat-custom-1')?.name).toBe('World Travel')
+    expect(afterEdit.find((c) => c.id === 'cat-custom-1')?.sortOrder).toBe(5)
+
+    // Deleting middle custom category normalizes remaining custom positions to 4, 5 and persists
+    await budgetCategoryRepository.delete('cat-custom-1')
+    const afterDelete = await budgetCategoryRepository.findAll()
+    expect(afterDelete.map((c) => ({ id: c.id, sortOrder: c.sortOrder }))).toEqual([
+      { id: 'cat-expenses', sortOrder: 1 },
+      { id: 'cat-fixed', sortOrder: 2 },
+      { id: 'cat-savings', sortOrder: 3 },
+      { id: 'cat-custom-3', sortOrder: 4 },
+      { id: 'cat-custom-2', sortOrder: 5 },
+    ])
     expect(localStorage.getItem(BUDGET_CATEGORIES_STORAGE_KEY)).not.toBeNull()
   })
 
