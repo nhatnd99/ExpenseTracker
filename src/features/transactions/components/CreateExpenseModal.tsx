@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { X, Trash2 } from 'lucide-react'
-import type { BudgetCategory } from '@/types/models'
+import type { ExpenseCategory } from '@/types/models'
 import type { EnrichedTransaction } from '../transactionService'
 import { getTodayString, combineDateWithCurrentTime } from '@/services/dateService'
 import { useNumpadInput } from '../hooks/useNumpadInput'
@@ -17,7 +17,7 @@ import type { QuickTemplate } from '@/types/models'
 export interface CreateExpenseModalProps {
   isOpen: boolean
   onClose: () => void
-  categories: BudgetCategory[]
+  categories: ExpenseCategory[]
   onCategoriesChanged: () => void
   initialDate?: string
   initialTransaction?: EnrichedTransaction | null

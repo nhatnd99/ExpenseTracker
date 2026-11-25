@@ -3,7 +3,7 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import '@/i18n/config'
 import { ExpenseCategoryModal } from '../components/ExpenseCategoryModal'
 import * as expenseCategoryService from '@/features/categories/expense/expenseCategoryService'
-import { expenseCategoryRepository } from '@/repositories/expenseCategoryRepository'
+import { expenseCategoryRepository, sortExpenseCategories } from '@/repositories/expenseCategoryRepository'
 import {
   budgetCategoryRepository,
   BUDGET_CATEGORIES_STORAGE_KEY,
@@ -76,7 +76,7 @@ describe('ExpenseCategoryModal - Dedicated Expense Category Management (Step 2)'
     expect(screen.getByText(/Expense/i)).toBeDefined()
     expect(screen.getByText(/Income/i)).toBeDefined()
 
-    // Must NOT contain budget-specific fields or Additional Options
+    // Must NOT contain budget-specific fields, Additional Options, or Display Order UI
     expect(screen.queryByTestId('exclude-tracking-checkbox')).toBeNull()
     expect(screen.queryByTestId('itemized-records-checkbox')).toBeNull()
     expect(screen.queryByText(/Additional Options/i)).toBeNull()
@@ -85,6 +85,32 @@ describe('ExpenseCategoryModal - Dedicated Expense Category Management (Step 2)'
     expect(screen.queryByText(/Fixed Bill/i)).toBeNull()
     expect(screen.queryByText(/Manage Records/i)).toBeNull()
     expect(screen.queryByText(/Mark as fixed bill/i)).toBeNull()
+    expect(screen.queryByText(/Display Order/i)).toBeNull()
+    expect(screen.queryByText(/Thứ tự hiển thị/i)).toBeNull()
+    expect(screen.queryByRole('button', { name: /Move up|Di chuyển lên/i })).toBeNull()
+    expect(screen.queryByRole('button', { name: /Move down|Di chuyển xuống/i })).toBeNull()
+  })
+
+  it('creates categories without sortOrder and automatically sorts legacy + new categories consistently', async () => {
+    localStorage.setItem(CATEGORIES_STORAGE_KEY, JSON.stringify(initialCategories))
+
+    const created = await expenseCategoryService.addExpenseCategory({
+      name: 'Parking',
+      icon: 'Car',
+      type: 'expense',
+    })
+    expect(created.sortOrder).toBeUndefined()
+
+    const all = await expenseCategoryRepository.findAll()
+    // Legacy categories with sortOrder preserve order first, followed by new categories without sortOrder
+    expect(all.some((c) => c.id === created.id && c.name === 'Parking')).toBe(true)
+
+    const customSorted = sortExpenseCategories([
+      { id: 'c-new-2', name: 'Zebra', createdAt: '2026-11-25T12:00:00Z', updatedAt: '' },
+      { id: 'c-legacy', name: 'Legacy', sortOrder: 1, createdAt: '2026-01-01T00:00:00Z', updatedAt: '' },
+      { id: 'c-new-1', name: 'Alpha', createdAt: '2026-11-25T10:00:00Z', updatedAt: '' },
+    ])
+    expect(customSorted.map((c) => c.id)).toEqual(['c-legacy', 'c-new-1', 'c-new-2'])
   })
 
   it('validates empty name and creates Expense and Income categories independently', async () => {

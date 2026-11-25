@@ -106,10 +106,15 @@ async function ensureInitialized(): Promise<BudgetCategory[]> {
   let dbAllocs: MonthlyAllocation[] = []
   if (typeof indexedDB !== 'undefined') {
     try {
-      ;[dbCats, dbAllocs] = await Promise.all([
+      const [rawDbCats, rawDbAllocs] = await Promise.all([
         db.categories.toArray(),
         db.allocations.toArray(),
       ])
+      dbCats = rawDbCats.map((c, idx) => ({
+        ...c,
+        sortOrder: typeof c.sortOrder === 'number' ? c.sortOrder : idx + 1,
+      }))
+      dbAllocs = rawDbAllocs
     } catch {
       // IndexedDB unavailable or closed; proceed with localStorage fallback
     }

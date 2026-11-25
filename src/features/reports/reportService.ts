@@ -18,7 +18,7 @@ import { parseDateString, getTodayString } from '@/services/dateService'
 import { isBefore, isSameDay, isAfter } from 'date-fns'
 import { getPaydayCycle, computeCycleProgress, type PaydayCycle, type CycleBudgetProgress } from './paydayCycle'
 import { syncCycleSnapshots } from './snapshotService'
-import type { MonthId, DateString } from '@/types/models'
+import type { MonthId, DateString, ExpenseCategory } from '@/types/models'
 import type { EnrichedTransaction } from '@/features/transactions/transactionService'
 import { getEffectiveCycleTransactions } from '@/features/categories/categoryRecordService'
 
@@ -73,7 +73,7 @@ export async function getCycleReportData(
     budgetCategoryRepository.findAll(),
   ])
 
-  const mergedCategoryMap = new Map<string, (typeof budgetCategories)[number]>()
+  const mergedCategoryMap = new Map<string, ExpenseCategory>()
   for (const c of budgetCategories) {
     mergedCategoryMap.set(c.id, c)
   }

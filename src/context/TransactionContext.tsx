@@ -5,7 +5,7 @@ import {
   CATEGORIES_STORAGE_KEY,
   DEFAULT_BUDGET_CATEGORIES,
 } from './transaction-context'
-import type { Transaction, BudgetCategory } from '@/types/models'
+import type { Transaction, ExpenseCategory } from '@/types/models'
 import { useLocalStorage } from '@/hooks/useLocalStorage'
 import { db } from '@/db/database'
 
@@ -17,7 +17,7 @@ export function TransactionProvider({ children }: { children: ReactNode }) {
   )
 
   // 2. Categories - Persisted via useLocalStorage
-  const [categories, setCategories] = useLocalStorage<BudgetCategory[]>(
+  const [categories, setCategories] = useLocalStorage<ExpenseCategory[]>(
     CATEGORIES_STORAGE_KEY,
     DEFAULT_BUDGET_CATEGORIES,
   )
@@ -50,7 +50,7 @@ export function TransactionProvider({ children }: { children: ReactNode }) {
         const dbCats = await db.categories.toArray()
         if (active) {
           const rawCats = window.localStorage.getItem(CATEGORIES_STORAGE_KEY)
-          const storedCats: BudgetCategory[] = rawCats ? JSON.parse(rawCats) : []
+          const storedCats: ExpenseCategory[] = rawCats ? JSON.parse(rawCats) : []
           if (storedCats.length === 0 && dbCats.length > 0) {
             // Rehydrate localStorage from Dexie
             setCategories(dbCats)
@@ -123,7 +123,7 @@ export function TransactionProvider({ children }: { children: ReactNode }) {
   )
 
   const addCategory = useCallback(
-    async (cat: BudgetCategory) => {
+    async (cat: ExpenseCategory) => {
       setCategories((prev) => [...prev.filter((c) => c.id !== cat.id), cat])
       try {
         await db.categories.put(cat)
@@ -137,7 +137,7 @@ export function TransactionProvider({ children }: { children: ReactNode }) {
   )
 
   const updateCategory = useCallback(
-    async (id: string, updates: Partial<BudgetCategory>) => {
+    async (id: string, updates: Partial<ExpenseCategory>) => {
       setCategories((prev) =>
         prev.map((c) => (c.id === id ? { ...c, ...updates, updatedAt: new Date().toISOString() } : c)),
       )

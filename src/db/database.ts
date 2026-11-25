@@ -13,14 +13,14 @@
 import Dexie, { type Table } from 'dexie'
 import type {
   MonthlyPlan,
-  BudgetCategory,
+  ExpenseCategory,
   MonthlyAllocation,
   Transaction,
 } from '@/types/models'
 
 export class ExpenseTrackerDatabase extends Dexie {
   monthlyPlans!: Table<MonthlyPlan, string>
-  categories!: Table<BudgetCategory, string>
+  categories!: Table<ExpenseCategory, string>
   allocations!: Table<MonthlyAllocation, string>
   transactions!: Table<Transaction, string>
 

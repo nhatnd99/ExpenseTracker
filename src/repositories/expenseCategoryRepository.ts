@@ -60,29 +60,40 @@ function deleteCategoryFromLocalStorage(id: string) {
   }
 }
 
-function saveReorderedToLocalStorage(orderedCategories: ExpenseCategory[]) {
-  try {
-    if (typeof window === 'undefined') return
-    const now = new Date().toISOString()
-    const updated = orderedCategories.map((cat, idx) => ({
-      ...cat,
-      sortOrder: idx + 1,
-      updatedAt: now,
-    }))
-    window.localStorage.setItem(CATEGORIES_STORAGE_KEY, JSON.stringify(updated))
-  } catch {
-    // ignore
-  }
+/**
+ * Consistent automatic ordering for Expense Categories:
+ * 1. Preserves existing default/system or legacy ordering when legacy sortOrder is present.
+ * 2. Places newer categories (without sortOrder) consistently afterwards by createdAt, then name/id.
+ */
+export function sortExpenseCategories(categories: ExpenseCategory[]): ExpenseCategory[] {
+  return [...categories].sort((a, b) => {
+    const aHasOrder = typeof a.sortOrder === 'number' && Number.isFinite(a.sortOrder)
+    const bHasOrder = typeof b.sortOrder === 'number' && Number.isFinite(b.sortOrder)
+
+    if (aHasOrder && bHasOrder && a.sortOrder !== b.sortOrder) {
+      return a.sortOrder! - b.sortOrder!
+    }
+    if (aHasOrder !== bHasOrder) {
+      return aHasOrder ? -1 : 1
+    }
+    if (a.createdAt && b.createdAt && a.createdAt !== b.createdAt) {
+      return a.createdAt.localeCompare(b.createdAt)
+    }
+    const nameCompare = a.name.localeCompare(b.name)
+    if (nameCompare !== 0) return nameCompare
+    return a.id.localeCompare(b.id)
+  })
 }
 
 export const expenseCategoryRepository = {
-  /** Returns all expense/income categories ordered by sortOrder */
+  /** Returns all expense/income categories using consistent automatic ordering */
   async findAll(): Promise<ExpenseCategory[]> {
     let cats: ExpenseCategory[] = []
 
     if (typeof indexedDB !== 'undefined') {
       try {
-        cats = await db.categories.orderBy('sortOrder').toArray()
+        // Fetch all records via toArray() so categories without legacy sortOrder are never omitted
+        cats = await db.categories.toArray()
       } catch {
         // Fallback to localStorage below when IndexedDB is unavailable
       }
@@ -96,11 +107,11 @@ export const expenseCategoryRepository = {
           void db.categories.bulkPut(fallback).catch(() => {})
         }
       } else {
-        return DEFAULT_BUDGET_CATEGORIES
+        return sortExpenseCategories(DEFAULT_BUDGET_CATEGORIES)
       }
     }
 
-    return cats.sort((a, b) => a.sortOrder - b.sortOrder)
+    return sortExpenseCategories(cats)
   },
 
   /** Finds an expense category by its primary key */
@@ -151,27 +162,6 @@ export const expenseCategoryRepository = {
     if (typeof indexedDB !== 'undefined') {
       try {
         await db.categories.delete(id)
-      } catch {
-        // LocalStorage already updated
-      }
-    }
-  },
-
-  /** Reorders expense categories sequentially */
-  async reorder(orderedCategories: ExpenseCategory[]): Promise<void> {
-    saveReorderedToLocalStorage(orderedCategories)
-    if (typeof indexedDB !== 'undefined') {
-      try {
-        const now = new Date().toISOString()
-        await db.transaction('rw', db.categories, async () => {
-          for (let i = 0; i < orderedCategories.length; i++) {
-            const cat = orderedCategories[i]
-            await db.categories.update(cat.id, {
-              sortOrder: i + 1,
-              updatedAt: now,
-            })
-          }
-        })
       } catch {
         // LocalStorage already updated
       }

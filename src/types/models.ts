@@ -61,8 +61,8 @@ export interface ExpenseCategory {
   /** Legacy/optional fields preserved for backward compatibility */
   excludeFromExpenseTracking?: boolean
   enableItemizedRecords?: boolean
-  /** Display order */
-  sortOrder: number
+  /** Legacy optional display order */
+  sortOrder?: number
   createdAt: string
   updatedAt: string
 }

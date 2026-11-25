@@ -1,11 +1,10 @@
 import React, { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { X, Trash2, ArrowUp, ArrowDown, Edit2, Check } from 'lucide-react'
+import { X, Trash2, Edit2, Check } from 'lucide-react'
 import type { CategoryType, ExpenseCategory } from '@/types/models'
 import {
   updateExpenseCategory,
   deleteExpenseCategory,
-  reorderExpenseCategories,
   validateExpenseCategoryInput,
 } from '@/features/categories/expense/expenseCategoryService'
 import { transactionRepository } from '@/repositories/transactionRepository'
@@ -104,35 +103,16 @@ export const ExpenseCategoryManagement: React.FC<ExpenseCategoryManagementProps>
     }
   }
 
-  const handleMove = async (index: number, direction: 'up' | 'down') => {
-    const targetIndex = direction === 'up' ? index - 1 : index + 1
-    if (targetIndex < 0 || targetIndex >= filteredCategories.length) return
-
-    const itemA = filteredCategories[index]
-    const itemB = filteredCategories[targetIndex]
-    const fullIndexA = categories.findIndex((c) => c.id === itemA.id)
-    const fullIndexB = categories.findIndex((c) => c.id === itemB.id)
-    if (fullIndexA === -1 || fullIndexB === -1) return
-
-    const reordered = [...categories]
-    const temp = reordered[fullIndexA]
-    reordered[fullIndexA] = reordered[fullIndexB]
-    reordered[fullIndexB] = temp
-
-    await reorderExpenseCategories(reordered)
-    onCategoriesChanged()
-  }
-
   const editGroupIcons =
     CATEGORY_ICON_GROUPS.find((g) => g.groupId === editGroup)?.icons ??
     CATEGORY_ICON_GROUPS[0].icons
 
   return (
     <>
-      {/* List of categories with reorder, edit & delete */}
+      {/* List of categories with edit & delete (automatic ordering, no Display Order) */}
       <div className="space-y-2 w-full max-w-full box-border">
         <span className="text-xs font-bold text-[var(--color-text-secondary)] uppercase tracking-wider px-1 block">
-          {t('transactions.categoryOrder', 'Thứ tự hiển thị')} ({filteredCategories.length})
+          {t('transactions.categories', 'Danh mục')} ({filteredCategories.length})
         </span>
 
         {filteredCategories.length === 0 ? (
@@ -141,7 +121,7 @@ export const ExpenseCategoryManagement: React.FC<ExpenseCategoryManagementProps>
           </p>
         ) : (
           <div className="divide-y divide-[var(--color-border)] rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg-surface)] overflow-hidden w-full max-w-full box-border">
-            {filteredCategories.map((cat, idx) => (
+            {filteredCategories.map((cat) => (
               <div
                 key={cat.id}
                 className="p-2.5 sm:p-3 w-full max-w-full box-border hover:bg-[var(--color-bg-subtle)] transition-colors"
@@ -159,24 +139,6 @@ export const ExpenseCategoryManagement: React.FC<ExpenseCategoryManagementProps>
                   </div>
 
                   <div className="flex items-center gap-0.5 shrink-0">
-                    <button
-                      type="button"
-                      disabled={idx === 0}
-                      onClick={() => void handleMove(idx, 'up')}
-                      aria-label={t('plan.moveUp', 'Di chuyển lên')}
-                      className="flex h-8 w-8 items-center justify-center rounded-lg text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-subtle)] disabled:opacity-20 cursor-pointer"
-                    >
-                      <ArrowUp className="h-4 w-4" />
-                    </button>
-                    <button
-                      type="button"
-                      disabled={idx === filteredCategories.length - 1}
-                      onClick={() => void handleMove(idx, 'down')}
-                      aria-label={t('plan.moveDown', 'Di chuyển xuống')}
-                      className="flex h-8 w-8 items-center justify-center rounded-lg text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-subtle)] disabled:opacity-20 cursor-pointer"
-                    >
-                      <ArrowDown className="h-4 w-4" />
-                    </button>
                     <button
                       type="button"
                       data-testid={`category-edit-${cat.id}`}

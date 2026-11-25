@@ -12,7 +12,7 @@ import {
   ArrowUp,
   ArrowDown,
 } from 'lucide-react'
-import type { BudgetCategory, QuickTemplate, TransactionType } from '@/types/models'
+import type { ExpenseCategory, QuickTemplate, TransactionType } from '@/types/models'
 import { formatCurrencyDisplay, parseCurrencyToNumber } from '@/utils/currency'
 import { CategoryIconRenderer } from '@/components/ui/CategoryIconRenderer'
 import { useSettings } from '@/context/useSettings'
@@ -20,13 +20,13 @@ import { useSettings } from '@/context/useSettings'
 export interface ManageQuickTemplateModalProps {
   isOpen: boolean
   onClose: () => void
-  categories: BudgetCategory[]
+  categories: ExpenseCategory[]
 }
 
 interface QuickTemplateDialogProps {
   onClose: () => void
   initialTemplate?: QuickTemplate | null
-  categories: BudgetCategory[]
+  categories: ExpenseCategory[]
   onSave: (data: Omit<QuickTemplate, 'id'>, id?: string) => void
 }
 

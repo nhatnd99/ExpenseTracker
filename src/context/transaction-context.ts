@@ -1,16 +1,16 @@
 import { createContext } from 'react'
-import type { Transaction, BudgetCategory } from '@/types/models'
+import type { Transaction, ExpenseCategory } from '@/types/models'
 
 export interface TransactionContextType {
   transactions: Transaction[]
   setTransactions: (transactions: Transaction[] | ((prev: Transaction[]) => Transaction[])) => void
-  categories: BudgetCategory[]
-  setCategories: (categories: BudgetCategory[] | ((prev: BudgetCategory[]) => BudgetCategory[])) => void
+  categories: ExpenseCategory[]
+  setCategories: (categories: ExpenseCategory[] | ((prev: ExpenseCategory[]) => ExpenseCategory[])) => void
   addTransaction: (tx: Transaction) => Promise<void>
   updateTransaction: (id: string, updates: Partial<Transaction>) => Promise<void>
   deleteTransaction: (id: string) => Promise<void>
-  addCategory: (cat: BudgetCategory) => Promise<void>
-  updateCategory: (id: string, updates: Partial<BudgetCategory>) => Promise<void>
+  addCategory: (cat: ExpenseCategory) => Promise<void>
+  updateCategory: (id: string, updates: Partial<ExpenseCategory>) => Promise<void>
   deleteCategory: (id: string) => Promise<void>
   isRehydrated: boolean
 }
@@ -18,7 +18,7 @@ export interface TransactionContextType {
 export const TRANSACTIONS_STORAGE_KEY = 'expense_tracker_transactions'
 export const CATEGORIES_STORAGE_KEY = 'expense_tracker_categories'
 
-export const DEFAULT_BUDGET_CATEGORIES: BudgetCategory[] = [
+export const DEFAULT_BUDGET_CATEGORIES: ExpenseCategory[] = [
   { id: 'cat-expenses', name: 'Daily Expenses', icon: '🛒', type: 'expense', isFixedBill: false, sortOrder: 1, createdAt: '', updatedAt: '' },
   { id: 'cat-fixed', name: 'Fixed Bills', icon: '🏠', type: 'expense', isFixedBill: true, sortOrder: 2, createdAt: '', updatedAt: '' },
   { id: 'cat-savings', name: 'Savings', icon: '🏦', type: 'expense', isFixedBill: true, sortOrder: 3, createdAt: '', updatedAt: '' },

@@ -28,7 +28,7 @@ import {
   type EnrichedTransaction,
 } from './transactionService'
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner'
-import type { BudgetCategory } from '@/types/models'
+import type { ExpenseCategory } from '@/types/models'
 import { useSettings } from '@/context/useSettings'
 import { useDynamicBudget } from '@/features/dashboard/hooks/useDynamicBudget'
 import { CreateExpenseModal } from './components/CreateExpenseModal'
@@ -43,7 +43,7 @@ export function TransactionsPage() {
   const [selectedDate, setSelectedDate] = useState<string>(today)
   const [transactions, setTransactions] = useState<EnrichedTransaction[]>([])
   const [budgetMeta, setBudgetMeta] = useState<ExpenseBudgetMeta | null>(null)
-  const [categories, setCategories] = useState<BudgetCategory[]>([])
+  const [categories, setCategories] = useState<ExpenseCategory[]>([])
   const [loading, setLoading] = useState<boolean>(true)
 
   // Modal states: null = closed; undefined = create new; EnrichedTransaction = edit

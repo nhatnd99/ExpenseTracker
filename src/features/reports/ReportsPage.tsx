@@ -24,7 +24,7 @@ import {
   type EnrichedTransaction,
 } from '@/features/transactions/transactionService'
 import { CreateExpenseModal } from '@/features/transactions/components/CreateExpenseModal'
-import type { BudgetCategory, DateString } from '@/types/models'
+import type { ExpenseCategory, DateString } from '@/types/models'
 import { getCycleReportData, type CycleReportData } from './reportService'
 import { getDailyLimitSnapshots } from './snapshotService'
 import {
@@ -48,7 +48,7 @@ export function ReportsPage() {
 
   const [selectedMonth, setSelectedMonth] = useState<string>(currentCycleMonth)
   const [data, setData] = useState<CycleReportData | null>(null)
-  const [categories, setCategories] = useState<BudgetCategory[]>([])
+  const [categories, setCategories] = useState<ExpenseCategory[]>([])
   const [loading, setLoading] = useState<boolean>(true)
 
   // Interactive selection states:

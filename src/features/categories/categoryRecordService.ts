@@ -7,7 +7,7 @@
  * - OFF / ON: itemized records included in regular calculations exactly once
  * - ON / ON: stored independently, excluded from regular calculations
  */
-import type { BudgetCategory, Transaction, CategoryRecord } from '@/types/models'
+import type { BudgetCategory, ExpenseCategory, Transaction, CategoryRecord } from '@/types/models'
 import { categoryRecordRepository } from '@/repositories/categoryRecordRepository'
 
 /**
@@ -18,7 +18,7 @@ import { categoryRecordRepository } from '@/repositories/categoryRecordRepositor
  */
 export async function getEffectiveCycleTransactions(
   rawTransactions: Transaction[],
-  categories: BudgetCategory[],
+  categories: Array<BudgetCategory | ExpenseCategory>,
   startDate: string,
   endDate: string,
   monthlyPlanId: string = '',

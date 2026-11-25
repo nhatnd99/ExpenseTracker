@@ -16,7 +16,7 @@ import {
   calculateTotalExcludedBills,
 } from '@/domain/dashboardCalculator'
 import { getPaydayCycle, type PaydayCycle } from '@/features/reports/paydayCycle'
-import type { MonthId, MonthlyBudgetSummary, DailyBudgetStatus, DateString, Transaction } from '@/types/models'
+import type { MonthId, MonthlyBudgetSummary, DailyBudgetStatus, DateString, Transaction, ExpenseCategory } from '@/types/models'
 import type { EnrichedTransaction } from '@/features/transactions/transactionService'
 import { getTodayString, compareTransactionsDesc } from '@/services/dateService'
 import { getEffectiveCycleTransactions } from '@/features/categories/categoryRecordService'
@@ -50,7 +50,7 @@ export async function getDashboardData(
     budgetCategoryRepository.findAll(),
   ])
 
-  const mergedCategoryMap = new Map<string, (typeof budgetCategories)[number]>()
+  const mergedCategoryMap = new Map<string, ExpenseCategory>()
   for (const c of budgetCategories) {
     mergedCategoryMap.set(c.id, c)
   }

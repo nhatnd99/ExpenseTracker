@@ -61,11 +61,13 @@ describe('BudgetCategoryModal - Dedicated Monthly Budget Plan Category Managemen
     // Should NOT show Income category tab
     expect(screen.queryByRole('button', { name: /Income/i })).toBeNull()
 
-    // Should show Name input, Fixed Bill checkbox, and both Additional Options
+    // Should show Name input, Fixed Bill checkbox, both Additional Options, AND Display Order controls
     expect(screen.getByTestId('budget-category-name-input')).toBeDefined()
     expect(screen.getByTestId('budget-fixed-bill-checkbox')).toBeDefined()
     expect(screen.getByTestId('budget-exclude-tracking-checkbox')).toBeDefined()
     expect(screen.getByTestId('budget-itemized-records-checkbox')).toBeDefined()
+    expect(screen.getByText(/Display Order|Thứ tự hiển thị/i)).toBeDefined()
+    expect(screen.getAllByRole('button', { name: /Move up|Di chuyển lên/i }).length).toBeGreaterThan(0)
   })
 
   it('creates a Budget Category with Additional Options and notifies parent with created category', async () => {

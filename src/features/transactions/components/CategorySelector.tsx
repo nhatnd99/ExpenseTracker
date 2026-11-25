@@ -1,11 +1,11 @@
 import React from 'react'
 import { useTranslation } from 'react-i18next'
 import { Plus } from 'lucide-react'
-import type { BudgetCategory } from '@/types/models'
+import type { ExpenseCategory } from '@/types/models'
 import { CategoryIconRenderer } from '@/components/ui/CategoryIconRenderer'
 
 interface CategorySelectorProps {
-  categories: BudgetCategory[]
+  categories: ExpenseCategory[]
   selectedCategoryId: string
   onSelectCategory: (id: string) => void
   onOpenManager: () => void

@@ -10,7 +10,7 @@ import { categoryRepository } from '@/repositories/categoryRepository'
 import { dateToMonthId, getTodayString, combineDateWithCurrentTime, compareTransactionsDesc } from '@/services/dateService'
 import { calculateDailyLimit } from '@/domain/budgetCalculator'
 import { getCycleMonthForDate, getPaydayCycle, type PaydayCycle } from '@/features/reports/paydayCycle'
-import type { Transaction, DateString, MonthId, BudgetCategory } from '@/types/models'
+import type { Transaction, DateString, MonthId, ExpenseCategory } from '@/types/models'
 
 export interface CreateTransactionInput {
   categoryId: string
@@ -84,7 +84,7 @@ export async function getExpenseBudgetMeta(
   }
 }
 
-export const DEFAULT_INCOME_CATEGORIES: Omit<BudgetCategory, 'createdAt' | 'updatedAt'>[] = [
+export const DEFAULT_INCOME_CATEGORIES: Omit<ExpenseCategory, 'createdAt' | 'updatedAt'>[] = [
   { id: 'cat-inc-salary', name: 'Tiền lương', icon: 'Banknote', type: 'income', isFixedBill: false, sortOrder: 101 },
   { id: 'cat-inc-bonus', name: 'Tiền thưởng', icon: 'Gift', type: 'income', isFixedBill: false, sortOrder: 102 },
   { id: 'cat-inc-debt', name: 'Được trả nợ', icon: 'HandCoins', type: 'income', isFixedBill: false, sortOrder: 103 },
@@ -97,7 +97,7 @@ export const DEFAULT_INCOME_CATEGORIES: Omit<BudgetCategory, 'createdAt' | 'upda
  * Returns all categories available for transactions.
  * Automatically seeds default income categories if none exist in the database.
  */
-export async function getCategories(): Promise<BudgetCategory[]> {
+export async function getCategories(): Promise<ExpenseCategory[]> {
   const all = await categoryRepository.findAll()
   const hasIncome = all.some((c) => c.type === 'income')
   if (!hasIncome) {

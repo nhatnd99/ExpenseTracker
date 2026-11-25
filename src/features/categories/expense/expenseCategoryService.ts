@@ -3,9 +3,9 @@
  * Independent business logic and validation for Expense & Income categories
  * used on the Expenses page and Record New Expense flow.
  *
- * Strictly manages Expense Category properties (name, icon, type, sortOrder).
- * Any legacy budget-specific properties on existing persisted objects are left
- * untouched during partial updates for full backward compatibility.
+ * Strictly manages Expense Category properties (name, icon, type).
+ * Display Order has been removed from Expense Categories; legacy properties
+ * on existing persisted records are left untouched for backward compatibility.
  */
 import { crypto } from '@/utils/crypto'
 import { expenseCategoryRepository } from '@/repositories/expenseCategoryRepository'
@@ -42,16 +42,12 @@ export async function addExpenseCategory(input: CreateExpenseCategoryInput): Pro
     throw new Error('Expense category name is required.')
   }
 
-  const existing = await expenseCategoryRepository.findAll()
-  const maxSortOrder = existing.reduce((max, c) => Math.max(max, c.sortOrder), 0)
-
   const now = new Date().toISOString()
   const newCategory: ExpenseCategory = {
     id: `cat-${crypto.randomUUID().slice(0, 8)}`,
     name: input.name.trim(),
     icon: input.icon?.trim() || '🏷️',
     type: input.type ?? 'expense',
-    sortOrder: maxSortOrder + 1,
     createdAt: now,
     updatedAt: now,
   }
@@ -62,7 +58,7 @@ export async function addExpenseCategory(input: CreateExpenseCategoryInput): Pro
 
 export async function updateExpenseCategory(
   id: string,
-  changes: Partial<Pick<ExpenseCategory, 'name' | 'icon' | 'type' | 'sortOrder'>>,
+  changes: Partial<Pick<ExpenseCategory, 'name' | 'icon' | 'type'>>,
 ): Promise<void> {
   if (changes.name !== undefined) {
     const validation = validateExpenseCategoryInput(changes.name)
@@ -75,8 +71,4 @@ export async function updateExpenseCategory(
 
 export async function deleteExpenseCategory(id: string): Promise<void> {
   await expenseCategoryRepository.delete(id)
-}
-
-export async function reorderExpenseCategories(orderedCategories: ExpenseCategory[]): Promise<void> {
-  await expenseCategoryRepository.reorder(orderedCategories)
 }
