@@ -132,7 +132,15 @@ export const transactionRepository = {
 
   /** Returns all transactions for a category */
   async findByCategoryId(categoryId: string): Promise<Transaction[]> {
-    let txs = await db.transactions.where('categoryId').equals(categoryId).toArray()
+    let txs: Transaction[] = []
+
+    if (typeof indexedDB !== 'undefined') {
+      try {
+        txs = await db.transactions.where('categoryId').equals(categoryId).toArray()
+      } catch {
+        // Fallback to localStorage below when IndexedDB is unavailable
+      }
+    }
 
     if (txs.length === 0) {
       const fallback = getLocalStorageTransactions().filter((t) => t.categoryId === categoryId)

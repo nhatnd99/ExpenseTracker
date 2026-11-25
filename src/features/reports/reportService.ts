@@ -7,6 +7,7 @@ import { monthlyPlanRepository } from '@/repositories/monthlyPlanRepository'
 import { allocationRepository } from '@/repositories/allocationRepository'
 import { transactionRepository } from '@/repositories/transactionRepository'
 import { categoryRepository } from '@/repositories/categoryRepository'
+import { budgetCategoryRepository } from '@/repositories/budgetCategoryRepository'
 import { calculateTotalBudget } from '@/domain/budgetCalculator'
 import {
   calculateDynamicBudget,
@@ -65,11 +66,22 @@ export async function getCycleReportData(
 ): Promise<CycleReportData> {
   const cycle = getPaydayCycle(monthId, payDay)
 
-  // Fetch transactions and categories
-  const [rawTxs, categories] = await Promise.all([
+  // Fetch transactions and categories (both Expense and Budget categories merged)
+  const [rawTxs, expenseCategories, budgetCategories] = await Promise.all([
     transactionRepository.findByDateRange(cycle.startDate, cycle.endDate),
     categoryRepository.findAll(),
+    budgetCategoryRepository.findAll(),
   ])
+
+  const mergedCategoryMap = new Map<string, (typeof budgetCategories)[number]>()
+  for (const c of budgetCategories) {
+    mergedCategoryMap.set(c.id, c)
+  }
+  for (const c of expenseCategories) {
+    const budgetCat = mergedCategoryMap.get(c.id)
+    mergedCategoryMap.set(c.id, budgetCat ? { ...c, ...budgetCat, name: c.name, icon: c.icon } : c)
+  }
+  const categories = Array.from(mergedCategoryMap.values())
 
   const effectiveTxs = await getEffectiveCycleTransactions(
     rawTxs,
@@ -78,7 +90,7 @@ export async function getCycleReportData(
     cycle.endDate,
   )
 
-  const categoryMap = new Map(categories.map((c) => [c.id, c]))
+  const categoryMap = mergedCategoryMap
   const transactions: EnrichedTransaction[] = effectiveTxs.map((tx) => {
     const cat = categoryMap.get(tx.categoryId)
     return {

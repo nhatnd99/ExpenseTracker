@@ -32,7 +32,8 @@ import {
   saveMonthlyPlan,
   type PlanWithDetails,
 } from '@/features/monthly-plans/monthlyPlanService'
-import { categoryRepository } from '@/repositories/categoryRepository'
+import { budgetCategoryRepository } from '@/repositories/budgetCategoryRepository'
+import { expenseCategoryRepository } from '@/repositories/expenseCategoryRepository'
 import { CategoryIconRenderer } from '@/components/ui/CategoryIconRenderer'
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner'
 import { useBudgetCalculator } from './hooks/useBudgetCalculator'
@@ -40,9 +41,10 @@ import { PercentageInput } from './components/PercentageInput'
 import { ManageFixedBillsModal } from './components/ManageFixedBillsModal'
 import { normalizeFixedBills, mergeBills } from './utils/fixedBillsUtils'
 import type { FixedBillItem } from './types'
-import type { CategoryRecord } from '@/types/models'
+import type { CategoryRecord, ExpenseCategory } from '@/types/models'
 import { categoryRecordRepository } from '@/repositories/categoryRecordRepository'
-import { CategoryManagerModal } from '@/features/transactions/components/CategoryManagerModal'
+import { BudgetCategoryModal } from './components/BudgetCategoryModal'
+import type { BudgetCategoryChangeEvent } from './components/BudgetCategoryManagement'
 import { ManageCategoryRecordsModal } from '@/features/categories/components/ManageCategoryRecordsModal'
 
 export function SettingsPage() {
@@ -66,15 +68,17 @@ export function SettingsPage() {
   const [budgetSaveSuccess, setBudgetSaveSuccess] = useState<boolean>(false)
   const [budgetErrorMsg, setBudgetErrorMsg] = useState<string | null>(null)
 
-  // Quick Templates Modal & Categories State
+  // Quick Templates Modal & Separated Categories State
   const [isTemplateModalOpen, setIsTemplateModalOpen] = useState(false)
+  const [expenseCategories, setExpenseCategories] = useState<ExpenseCategory[]>([])
   const [allCategories, setAllCategories] = useState<BudgetCategory[]>([])
   const [allRecords, setAllRecords] = useState<CategoryRecord[]>([])
   const [selectedRecordCategory, setSelectedRecordCategory] = useState<BudgetCategory | null>(null)
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false)
 
   const reloadCategoriesAndRecords = React.useCallback(() => {
-    categoryRepository.findAll().then(setAllCategories).catch(() => {})
+    budgetCategoryRepository.findAll().then(setAllCategories).catch(() => {})
+    expenseCategoryRepository.findAll().then(setExpenseCategories).catch(() => {})
     categoryRecordRepository.findAll().then(setAllRecords).catch(() => {})
   }, [])
 
@@ -124,6 +128,7 @@ export function SettingsPage() {
     setCustomItemPercent,
     updateCustomItemName,
     addCustomItem,
+    syncCustomItemsFromCategories,
     removeCustomItem,
     initializeFromPlan,
     totalPercent,
@@ -136,6 +141,39 @@ export function SettingsPage() {
     initialDailyPercent: 50,
     initialSavingsPercent: 20,
   })
+
+  const handleBudgetCategoriesChanged = React.useCallback(
+    (event?: BudgetCategoryChangeEvent) => {
+      budgetCategoryRepository
+        .findAll()
+        .then((budgetCats) => {
+          setAllCategories(budgetCats)
+
+          if (event?.type === 'created') {
+            if (!event.category.excludeFromExpenseTracking && event.category.type !== 'income') {
+              addCustomItem(event.category.name, event.category.id, event.category.icon)
+            }
+          } else if (event?.type === 'updated') {
+            if (event.category.excludeFromExpenseTracking) {
+              if (customItems.some((c) => c.id === event.category.id)) {
+                removeCustomItem(event.category.id)
+              }
+            } else {
+              syncCustomItemsFromCategories(budgetCats)
+            }
+          } else if (event?.type === 'deleted') {
+            if (customItems.some((c) => c.id === event.categoryId)) {
+              removeCustomItem(event.categoryId)
+            }
+          } else if (event?.type === 'reordered') {
+            syncCustomItemsFromCategories(budgetCats)
+          }
+        })
+        .catch(() => {})
+      categoryRecordRepository.findAll().then(setAllRecords).catch(() => {})
+    },
+    [addCustomItem, removeCustomItem, syncCustomItemsFromCategories, customItems],
+  )
 
   // Current cycle details
   const activeCycle: PaydayCycle = useMemo(() => {
@@ -334,21 +372,21 @@ export function SettingsPage() {
         // ignore
       }
 
-      // 2. Ensure categories exist
-      await categoryRepository.update('cat-expenses', { name: 'Daily Expenses', sortOrder: 1 }).catch(() => { })
-      await categoryRepository.update('cat-fixed', { name: 'Fixed Bills', sortOrder: 2 }).catch(() => { })
-      await categoryRepository.update('cat-savings', { name: 'Savings', sortOrder: 3 }).catch(() => { })
+      // 2. Ensure core budget category sort orders exist without overwriting user-edited names
+      await budgetCategoryRepository.update('cat-expenses', { sortOrder: 1 }).catch(() => { })
+      await budgetCategoryRepository.update('cat-fixed', { sortOrder: 2 }).catch(() => { })
+      await budgetCategoryRepository.update('cat-savings', { sortOrder: 3 }).catch(() => { })
 
       for (let i = 0; i < customItems.length; i++) {
         const item = customItems[i]
-        const existingCat = await categoryRepository.findById(item.id)
+        const existingCat = await budgetCategoryRepository.findById(item.id)
         if (existingCat) {
-          await categoryRepository.update(item.id, {
+          await budgetCategoryRepository.update(item.id, {
             name: item.name.trim() || t('transactions.categories', 'Danh mục'),
             sortOrder: i + 4,
           })
         } else {
-          await categoryRepository.create({
+          await budgetCategoryRepository.create({
             id: item.id,
             name: item.name.trim() || t('transactions.categories', 'Danh mục'),
             icon: item.icon || '🏷️',
@@ -733,7 +771,8 @@ export function SettingsPage() {
                   <div className="flex items-center gap-2 pt-1">
                     <button
                       type="button"
-                      onClick={() => addCustomItem(t('plan.newCategoryDefaultName', { index: customItems.length + 1 }))}
+                      data-testid="budget-add-category-btn"
+                      onClick={() => setIsCategoryModalOpen(true)}
                       className="flex-1 py-2.5 rounded-2xl border border-dashed border-[var(--color-border)] bg-[var(--color-bg-subtle)] text-xs font-bold text-[var(--color-primary)] hover:bg-[var(--color-border)] active:scale-[0.99] transition-all flex items-center justify-center gap-1.5 cursor-pointer box-border"
                     >
                       <Plus className="h-4 w-4" />
@@ -741,6 +780,7 @@ export function SettingsPage() {
                     </button>
                     <button
                       type="button"
+                      data-testid="budget-manage-categories-btn"
                       onClick={() => setIsCategoryModalOpen(true)}
                       className="py-2.5 px-3 rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg-subtle)] text-xs font-bold text-[var(--color-text-secondary)] hover:text-[var(--color-primary)] hover:bg-[var(--color-border)] active:scale-[0.99] transition-all flex items-center justify-center gap-1.5 cursor-pointer box-border shrink-0"
                       title={t('transactions.categoryManagerTitle', 'Quản Lý Danh Mục')}
@@ -1037,19 +1077,19 @@ export function SettingsPage() {
         />
       )}
 
-      {/* Manage Quick Templates Modal */}
+      {/* Manage Quick Templates Modal (uses Expense Categories) */}
       <ManageQuickTemplateModal
         isOpen={isTemplateModalOpen}
         onClose={() => setIsTemplateModalOpen(false)}
-        categories={allCategories}
+        categories={expenseCategories}
       />
 
-      {/* Category Manager Modal */}
-      <CategoryManagerModal
+      {/* Budget Category Manager Modal (uses Budget Categories) */}
+      <BudgetCategoryModal
         isOpen={isCategoryModalOpen}
         onClose={() => setIsCategoryModalOpen(false)}
         categories={allCategories}
-        onCategoriesChanged={reloadCategoriesAndRecords}
+        onCategoriesChanged={handleBudgetCategoriesChanged}
       />
 
       {/* Itemized Category Records Modal */}

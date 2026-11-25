@@ -165,16 +165,45 @@ export function useBudgetCalculator({
     setCustomItems((prev) => prev.map((c) => (c.id === id ? { ...c, name } : c)))
   }, [])
 
-  // Handler: Add Custom Item (starts at 0% or takes a small slice from Savings if available)
+  // Handler: Add Custom Item (starts at 0% or uses persisted Budget Category id/icon)
   const addCustomItem = useCallback(
-    (name: string) => {
-      const newItem: BudgetItemState = {
-        id: `cat-${Date.now()}`,
-        name,
-        icon: '🏷️',
-        percent: 0,
-      }
-      setCustomItems((prev) => [...prev, newItem])
+    (name: string, id?: string, icon?: string) => {
+      const targetId = id || `cat-${Date.now()}`
+      setCustomItems((prev) => {
+        if (prev.some((c) => c.id === targetId)) return prev
+        const newItem: BudgetItemState = {
+          id: targetId,
+          name,
+          icon: icon || '🏷️',
+          percent: 0,
+        }
+        return [...prev, newItem]
+      })
+    },
+    [],
+  )
+
+  // Handler: Sync custom item names, icons, and display order from BudgetCategory records without resetting percentages
+  const syncCustomItemsFromCategories = useCallback(
+    (categories: Array<{ id: string; name: string; icon?: string; sortOrder: number }>) => {
+      const catMap = new Map(categories.map((c) => [c.id, c]))
+      setCustomItems((prev) =>
+        prev
+          .map((item) => {
+            const cat = catMap.get(item.id)
+            if (!cat) return item
+            return {
+              ...item,
+              name: cat.name,
+              icon: cat.icon || item.icon,
+            }
+          })
+          .sort((a, b) => {
+            const orderA = catMap.get(a.id)?.sortOrder ?? Number.MAX_SAFE_INTEGER
+            const orderB = catMap.get(b.id)?.sortOrder ?? Number.MAX_SAFE_INTEGER
+            return orderA - orderB
+          }),
+      )
     },
     [],
   )
@@ -238,6 +267,7 @@ export function useBudgetCalculator({
     setCustomItemPercent,
     updateCustomItemName,
     addCustomItem,
+    syncCustomItemsFromCategories,
     removeCustomItem,
     initializeFromPlan,
     totalPercent,

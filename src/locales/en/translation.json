@@ -141,7 +141,10 @@
     "scopeTitle": "Budget Save Scope:",
     "scopeAllMonths": "Save as default template for all months",
     "scopeCurrentMonth": "Apply to current month only",
-    "scopeHelp": "When saved as default, all upcoming months will automatically inherit this budget plan."
+    "scopeHelp": "When saved as default, all upcoming months will automatically inherit this budget plan.",
+    "budgetCategoryManagerTitle": "Manage Budget Categories",
+    "newBudgetCategoryTitle": "New budget category",
+    "budgetCategoryPlaceholder": "e.g. Travel, Entertainment, Education…"
   },
   "transactions": {
     "title": "Daily Expenses",
@@ -197,6 +200,8 @@
     "categoryEmpty": "No categories yet.",
     "categoryNameRequired": "Please enter a category name.",
     "deleteCategoryConfirm": "Are you sure you want to delete category \"{{name}}\"?",
+    "deleteCategoryWithRecordsConfirm": "Category \"{{name}}\" is referenced by {{count}} transaction(s). Historical records will remain intact. Are you sure you want to delete this category?",
+    "categoryTypeLabel": "Category Type",
     "dateLabel": "Date",
     "noteLabel": "Note / Description (Optional)",
     "notePlaceholder": "e.g. Lunch with team, supermarket…",

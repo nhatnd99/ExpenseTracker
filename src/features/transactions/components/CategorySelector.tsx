@@ -27,6 +27,7 @@ export const CategorySelector: React.FC<CategorySelectorProps> = ({
         </span>
         <button
           type="button"
+          data-testid="customize-categories-btn"
           onClick={onOpenManager}
           className="flex items-center gap-1 text-xs font-semibold text-[var(--color-primary)] hover:underline cursor-pointer"
         >
@@ -63,6 +64,7 @@ export const CategorySelector: React.FC<CategorySelectorProps> = ({
         {/* Plus button to quickly add or manage */}
         <button
           type="button"
+          data-testid="add-category-btn"
           onClick={onOpenManager}
           className="shrink-0 snap-start flex flex-col items-center justify-center w-18 h-18 sm:w-20 sm:h-20 p-2 rounded-2xl border border-dashed border-[var(--color-border)] bg-[var(--color-bg-subtle)] text-[var(--color-text-muted)] hover:border-[var(--color-primary)] hover:text-[var(--color-primary)] active:scale-95 cursor-pointer touch-target"
         >

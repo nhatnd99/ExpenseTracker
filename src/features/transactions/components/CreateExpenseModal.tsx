@@ -8,7 +8,7 @@ import { useNumpadInput } from '../hooks/useNumpadInput'
 import { CustomNumpad } from './CustomNumpad'
 import { CategorySelector } from './CategorySelector'
 import { SmartNoteInput } from './SmartNoteInput'
-import { CategoryManagerModal } from './CategoryManagerModal'
+import { ExpenseCategoryModal } from './ExpenseCategoryModal'
 import { CategoryIconRenderer } from '@/components/ui/CategoryIconRenderer'
 import { useSettings } from '@/context/useSettings'
 import { formatCompactVnd } from '@/utils/currency'
@@ -499,8 +499,8 @@ export const CreateExpenseModal: React.FC<CreateExpenseModalProps> = ({
         </div>
       </div>
 
-      {/* Category Manager Modal */}
-      <CategoryManagerModal
+      {/* Expense Category Manager Modal */}
+      <ExpenseCategoryModal
         isOpen={isCategoryManagerOpen}
         onClose={() => setIsCategoryManagerOpen(false)}
         categories={categories}

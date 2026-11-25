@@ -142,7 +142,10 @@
     "scopeTitle": "Phạm vi lưu ngân sách:",
     "scopeAllMonths": "Lưu làm mặc định cho tất cả các tháng",
     "scopeCurrentMonth": "Chỉ áp dụng thay đổi cho tháng hiện tại",
-    "scopeHelp": "Khi lưu làm mặc định, mọi tháng mới sẽ tự động kế thừa kế hoạch này."
+    "scopeHelp": "Khi lưu làm mặc định, mọi tháng mới sẽ tự động kế thừa kế hoạch này.",
+    "budgetCategoryManagerTitle": "Quản Lý Danh Mục Ngân Sách",
+    "newBudgetCategoryTitle": "Thêm danh mục ngân sách mới",
+    "budgetCategoryPlaceholder": "Ví dụ: Du lịch, Giải trí, Học tập…"
   },
   "transactions": {
     "title": "Ghi Chép Chi Tiêu",
@@ -198,6 +201,8 @@
     "categoryEmpty": "Chưa có danh mục nào.",
     "categoryNameRequired": "Vui lòng nhập tên danh mục.",
     "deleteCategoryConfirm": "Bạn có chắc chắn muốn xóa danh mục \"{{name}}\"?",
+    "deleteCategoryWithRecordsConfirm": "Danh mục \"{{name}}\" đang được sử dụng trong {{count}} giao dịch. Các giao dịch cũ vẫn sẽ được giữ nguyên. Bạn có chắc chắn muốn xóa danh mục này?",
+    "categoryTypeLabel": "Loại danh mục",
     "dateLabel": "Ngày Chi Tiêu",
     "noteLabel": "Ghi Chú / Diễn Giải (Tùy chọn)",
     "notePlaceholder": "Ví dụ: Cơm trưa đồng nghiệp, siêu thị…",

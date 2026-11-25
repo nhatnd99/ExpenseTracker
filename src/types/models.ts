@@ -47,7 +47,28 @@ export interface MonthlyPlan {
 export type CategoryType = 'expense' | 'income'
 
 /**
- * A named spending or savings category defined by the user.
+ * A named expense or income category used on the Expenses page and Record New Expense flow.
+ */
+export interface ExpenseCategory {
+  id: Id
+  name: string
+  /** Optional emoji or icon identifier for display */
+  icon?: string
+  /** Type of category: expense (default) or income */
+  type?: CategoryType
+  /** Whether expenses in this category are fixed bills/large expenses (excluded from daily limit by default) */
+  isFixedBill?: boolean
+  /** Legacy/optional fields preserved for backward compatibility */
+  excludeFromExpenseTracking?: boolean
+  enableItemizedRecords?: boolean
+  /** Display order */
+  sortOrder: number
+  createdAt: string
+  updatedAt: string
+}
+
+/**
+ * A named spending or savings category used by Monthly Budget Plan.
  * Categories are global; their per-month allocation percentages are stored
  * in MonthlyAllocation to preserve historical values.
  */

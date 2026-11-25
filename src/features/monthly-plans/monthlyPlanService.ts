@@ -5,7 +5,7 @@
 import { crypto } from '@/utils/crypto'
 import { monthlyPlanRepository } from '@/repositories/monthlyPlanRepository'
 import { allocationRepository } from '@/repositories/allocationRepository'
-import { categoryRepository } from '@/repositories/categoryRepository'
+import { budgetCategoryRepository } from '@/repositories/budgetCategoryRepository'
 import { validateAllocationsSum } from '@/domain/validation'
 import { calculateDailyLimit } from '@/domain/budgetCalculator'
 import { getCycleMonthForDate, getPaydayCycle } from '@/features/reports/paydayCycle'
@@ -56,7 +56,7 @@ export function saveGlobalBudgetTemplate(template: GlobalBudgetTemplate): void {
  * If no plan exists for this month, falls back to the Global Budget Template if available.
  */
 export async function getPlanWithAllocations(month: MonthId): Promise<PlanWithDetails> {
-  const categories = await categoryRepository.findAll()
+  const categories = await budgetCategoryRepository.findAll()
   const plan = await monthlyPlanRepository.findByMonth(month)
 
   if (!plan) {
