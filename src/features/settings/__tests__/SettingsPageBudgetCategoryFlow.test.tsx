@@ -20,7 +20,7 @@ describe('SettingsPage Monthly Budget Plan Integration with BudgetCategoryModal 
     })
   })
 
-  it('opens BudgetCategoryModal from both Add Category and Manage Categories buttons without touching Expense Categories', async () => {
+  it('exposes only a single Manage Categories button (removing Add Category) and supports creating categories without touching Expense Categories', async () => {
     const initialExpenseCats = [
       { id: 'exp-1', name: 'Coffee', icon: 'Coffee', type: 'expense', sortOrder: 1, createdAt: '', updatedAt: '' },
     ]
@@ -34,11 +34,15 @@ describe('SettingsPage Monthly Budget Plan Integration with BudgetCategoryModal 
 
     // Wait for initial loading spinner to finish
     await waitFor(() => {
-      expect(screen.getByTestId('budget-add-category-btn')).toBeDefined()
+      expect(screen.getByTestId('budget-manage-categories-btn')).toBeDefined()
     })
 
-    // 1. Click Add Category button -> opens BudgetCategoryModal (NOT ExpenseCategoryModal)
-    fireEvent.click(screen.getByTestId('budget-add-category-btn'))
+    // Standalone Add Category button must be removed, keeping only Manage Categories
+    expect(screen.queryByTestId('budget-add-category-btn')).toBeNull()
+    expect(screen.getAllByTestId('budget-manage-categories-btn')).toHaveLength(1)
+
+    // Click Manage Categories button -> opens BudgetCategoryModal (NOT ExpenseCategoryModal)
+    fireEvent.click(screen.getByTestId('budget-manage-categories-btn'))
     expect(screen.getByTestId('budget-category-modal')).toBeDefined()
     expect(screen.queryByTestId('expense-category-modal')).toBeNull()
 
@@ -65,13 +69,9 @@ describe('SettingsPage Monthly Budget Plan Integration with BudgetCategoryModal 
 
     // Verify Expense Categories remain completely untouched
     expect(localStorage.getItem(CATEGORIES_STORAGE_KEY)).toBe(JSON.stringify(initialExpenseCats))
-
-    // 2. Click Manage Categories button -> opens BudgetCategoryModal as well
-    fireEvent.click(screen.getByTestId('budget-manage-categories-btn'))
-    expect(screen.getByTestId('budget-category-modal')).toBeDefined()
   })
 
-  it('creates an excluded itemized Budget Category and immediately displays its independent card in Monthly Budget Plan', async () => {
+  it('creates an excluded itemized Budget Category via Manage Categories and immediately displays its independent card in Monthly Budget Plan', async () => {
     render(
       <SettingsProvider>
         <SettingsPage />
@@ -79,10 +79,10 @@ describe('SettingsPage Monthly Budget Plan Integration with BudgetCategoryModal 
     )
 
     await waitFor(() => {
-      expect(screen.getByTestId('budget-add-category-btn')).toBeDefined()
+      expect(screen.getByTestId('budget-manage-categories-btn')).toBeDefined()
     })
 
-    fireEvent.click(screen.getByTestId('budget-add-category-btn'))
+    fireEvent.click(screen.getByTestId('budget-manage-categories-btn'))
 
     fireEvent.change(screen.getByTestId('budget-category-name-input'), {
       target: { value: 'Weekend Trips' },

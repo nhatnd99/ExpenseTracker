@@ -9,7 +9,6 @@ import {
   ChevronRight,
   Receipt,
   Wallet,
-  Plus,
   Trash2,
   Lock,
   Settings2,
@@ -789,28 +788,17 @@ export function SettingsPage() {
                     return orderedNodes
                   })()}
 
-                  {/* Category Actions Row */}
-                  <div className="flex items-center gap-2 pt-1">
-                    <button
-                      type="button"
-                      data-testid="budget-add-category-btn"
-                      onClick={() => setIsCategoryModalOpen(true)}
-                      className="flex-1 py-2.5 rounded-2xl border border-dashed border-[var(--color-border)] bg-[var(--color-bg-subtle)] text-xs font-bold text-[var(--color-primary)] hover:bg-[var(--color-border)] active:scale-[0.99] transition-all flex items-center justify-center gap-1.5 cursor-pointer box-border"
-                    >
-                      <Plus className="h-4 w-4" />
-                      <span>{t('plan.addCategory', 'Thêm Danh Mục Phân Bổ')}</span>
-                    </button>
-                    <button
-                      type="button"
-                      data-testid="budget-manage-categories-btn"
-                      onClick={() => setIsCategoryModalOpen(true)}
-                      className="py-2.5 px-3 rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg-subtle)] text-xs font-bold text-[var(--color-text-secondary)] hover:text-[var(--color-primary)] hover:bg-[var(--color-border)] active:scale-[0.99] transition-all flex items-center justify-center gap-1.5 cursor-pointer box-border shrink-0"
-                      title={t('transactions.categoryManagerTitle', 'Quản Lý Danh Mục')}
-                    >
-                      <Settings2 className="h-4 w-4" />
-                      <span className="hidden sm:inline">{t('transactions.categoryManagerTitle', 'Quản Lý Danh Mục')}</span>
-                    </button>
-                  </div>
+                  {/* Single Budget Category Management Entry Point */}
+                  <button
+                    type="button"
+                    data-testid="budget-manage-categories-btn"
+                    onClick={() => setIsCategoryModalOpen(true)}
+                    className="w-full py-2.5 px-4 rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg-subtle)] text-xs font-bold text-[var(--color-text-secondary)] hover:text-[var(--color-primary)] hover:bg-[var(--color-border)] active:scale-[0.99] transition-all flex items-center justify-center gap-2 cursor-pointer box-border"
+                    title={t('transactions.categoryManagerTitle', 'Quản Lý Danh Mục')}
+                  >
+                    <Settings2 className="h-4 w-4 shrink-0" />
+                    <span>{t('transactions.categoryManagerTitle', 'Quản Lý Danh Mục')}</span>
+                  </button>
                 </div>
 
                 {budgetErrorMsg && (
